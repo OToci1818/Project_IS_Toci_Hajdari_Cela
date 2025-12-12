@@ -1,0 +1,193 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  student
+  team_leader
+  professor
+  admin
+}
+
+enum TaskStatus {
+  to_do
+  in_progress
+  done
+  archived
+}
+
+enum TaskPriority {
+  low
+  medium
+  high
+}
+
+enum InviteStatus {
+  pending
+  accepted
+  declined
+}
+
+enum ProjectStatus {
+  active
+  completed
+  archived
+}
+
+enum ProjectType {
+  individual
+  group
+}
+
+model User {
+  id          String    @id @default(uuid())
+  email       String    @unique
+  fullName    String    @map("full_name")
+  role        UserRole  @default(student)
+  avatarUrl   String?   @map("avatar_url")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  lastLoginAt DateTime? @map("last_login_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  sessions         Session[]
+  ledProjects      Project[]       @relation("TeamLeader")
+  projectMembers   ProjectUser[]   @relation("Member")
+  invitesSent      ProjectUser[]   @relation("InvitedBy")
+  assignedTasks    Task[]          @relation("Assignee")
+  createdTasks     Task[]          @relation("TaskCreator")
+  taskChanges      TaskHistory[]
+  uploadedFiles    File[]
+  activityLogs     ActivityLog[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  userAgent String?  @map("user_agent")
+  ip        String?
+  createdAt DateTime @default(now()) @map("created_at")
+  expiresAt DateTime @map("expires_at")
+  revoked   Boolean  @default(false)
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("sessions")
+}
+
+model Project {
+  id           String        @id @default(uuid())
+  title        String
+  description  String?
+  courseCode   String?       @map("course_code")
+  projectType  ProjectType   @default(group) @map("project_type")
+  teamLeaderId String        @map("team_leader_id")
+  status       ProjectStatus @default(active)
+  deadlineDate DateTime?     @map("deadline_date")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  deletedAt    DateTime?     @map("deleted_at")
+
+  teamLeader   User          @relation("TeamLeader", fields: [teamLeaderId], references: [id])
+  members      ProjectUser[]
+  tasks        Task[]
+
+  @@map("projects")
+}
+
+model ProjectUser {
+  id           String       @id @default(uuid())
+  projectId    String       @map("project_id")
+  userId       String       @map("user_id")
+  role         UserRole     @default(student)
+  invitedById  String?      @map("invited_by")
+  inviteStatus InviteStatus @default(pending) @map("invite_status")
+  joinedAt     DateTime?    @map("joined_at")
+
+  project   Project @relation(fields: [projectId], references: [id])
+  user      User    @relation("Member", fields: [userId], references: [id])
+  invitedBy User?   @relation("InvitedBy", fields: [invitedById], references: [id])
+
+  @@unique([projectId, userId])
+  @@map("project_user")
+}
+
+model Task {
+  id          String       @id @default(uuid())
+  projectId   String       @map("project_id")
+  title       String
+  description String?
+  priority    TaskPriority @default(medium)
+  status      TaskStatus   @default(to_do)
+  assigneeId  String?      @map("assignee_id")
+  ordinal     Int          @default(0)
+  createdById String       @map("created_by")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  dueDate     DateTime?    @map("due_date")
+  isDeleted   Boolean      @default(false) @map("is_deleted")
+  deletedAt   DateTime?    @map("deleted_at")
+
+  project   Project       @relation(fields: [projectId], references: [id])
+  assignee  User?         @relation("Assignee", fields: [assigneeId], references: [id])
+  createdBy User          @relation("TaskCreator", fields: [createdById], references: [id])
+  history   TaskHistory[]
+  files     File[]
+
+  @@map("tasks")
+}
+
+model TaskHistory {
+  id               String      @id @default(uuid())
+  taskId           String      @map("task_id")
+  changedById      String      @map("changed_by")
+  previousStatus   TaskStatus? @map("previous_status")
+  newStatus        TaskStatus? @map("new_status")
+  previousAssignee String?     @map("previous_assignee")
+  newAssignee      String?     @map("new_assignee")
+  comment          String?
+  createdAt        DateTime    @default(now()) @map("created_at")
+
+  task      Task @relation(fields: [taskId], references: [id])
+  changedBy User @relation(fields: [changedById], references: [id])
+
+  @@map("task_history")
+}
+
+model File {
+  id         String   @id @default(uuid())
+  taskId     String   @map("task_id")
+  uploadedBy String   @map("uploaded_by")
+  filename   String
+  s3Key      String?  @map("s3_key")
+  sizeBytes  BigInt   @map("size_bytes")
+  mimeType   String?  @map("mime_type")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  task   Task @relation(fields: [taskId], references: [id])
+  uploader User @relation(fields: [uploadedBy], references: [id])
+
+  @@map("files")
+}
+
+model ActivityLog {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  action       String
+  resourceType String?  @map("resource_type")
+  resourceId   String?  @map("resource_id")
+  details      Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("activity_logs")
+}
