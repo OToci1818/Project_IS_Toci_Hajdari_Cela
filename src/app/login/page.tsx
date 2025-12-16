@@ -6,12 +6,35 @@ import { Button, Input } from '@/components'
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
+  const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({})
   const [loading, setLoading] = useState(false)
+  const [setupLoading, setSetupLoading] = useState(false)
+  const [setupMessage, setSetupMessage] = useState('')
 
   const validateEmail = (email: string): boolean => {
     const institutionalEmailRegex = /^[a-zA-Z0-9._%+-]+@fti\.edu\.al$/
     return institutionalEmailRegex.test(email)
+  }
+
+  const handleSetupDemo = async () => {
+    setSetupLoading(true)
+    setSetupMessage('')
+    try {
+      const response = await fetch('/api/setup', { method: 'POST' })
+      const data = await response.json()
+
+      if (response.ok) {
+        setSetupMessage(`Demo user created! Email: ${data.user.email}, Password: ${data.password}`)
+        setEmail(data.user.email)
+        setPassword(data.password)
+      } else {
+        setSetupMessage(data.error || 'Failed to setup demo')
+      }
+    } catch {
+      setSetupMessage('Failed to connect to server')
+    } finally {
+      setSetupLoading(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,10 +61,25 @@ export default function LoginPage() {
     }
 
     setLoading(true)
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        window.location.href = '/dashboard'
+      } else {
+        setErrors({ general: data.error || 'Login failed' })
+      }
+    } catch {
+      setErrors({ general: 'Failed to connect to server' })
+    } finally {
       setLoading(false)
-      window.location.href = '/dashboard'
-    }, 1000)
+    }
   }
 
   return (
@@ -59,6 +97,18 @@ export default function LoginPage() {
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
           <h2 className="text-xl font-semibold text-[#1E293B] mb-6">Sign in to your account</h2>
+
+          {errors.general && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+              {errors.general}
+            </div>
+          )}
+
+          {setupMessage && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-600 text-sm">
+              {setupMessage}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
@@ -103,10 +153,19 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-gray-100 text-center">
-            <p className="text-sm text-[#64748B]">
+          <div className="mt-6 pt-6 border-t border-gray-100">
+            <p className="text-sm text-[#64748B] text-center mb-4">
               Only institutional emails (@fti.edu.al) are accepted
             </p>
+            <Button
+              type="button"
+              variant="secondary"
+              loading={setupLoading}
+              onClick={handleSetupDemo}
+              className="w-full"
+            >
+              Setup Demo Account
+            </Button>
           </div>
         </div>
       </div>
