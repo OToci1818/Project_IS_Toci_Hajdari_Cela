@@ -1,15 +1,25 @@
-import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { authService, taskService } from '@/services'
-import { TaskStatus, TaskPriority } from '@/types'
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { authService, taskService } from "@/services";
+import { TaskStatus, TaskPriority } from "@/types";
+import jwt from "jsonwebtoken";
 
 async function getCurrentUser() {
-  const cookieStore = await cookies()
-  const sessionId = cookieStore.get('sessionId')?.value
-  if (!sessionId) return null
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+  if (!token) return null;
 
-  const result = await authService.validateSession(sessionId)
-  return result.valid ? result.user : null
+  try {
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "your-secret-key-change-in-production"
+    ) as { userId: string; email: string };
+
+    const user = await authService.getUserById(decoded.userId);
+    return user ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function GET(
@@ -17,22 +27,25 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser()
+    const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const { id } = await params
-    const task = await taskService.getTaskById(id)
+    const { id } = await params;
+    const task = await taskService.getTaskById(id);
 
     if (!task) {
-      return NextResponse.json({ error: 'Task not found' }, { status: 404 })
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ task })
+    return NextResponse.json({ task });
   } catch (error) {
-    console.error('Get task error:', error)
-    return NextResponse.json({ error: 'Failed to fetch task' }, { status: 500 })
+    console.error("Get task error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch task" },
+      { status: 500 }
+    );
   }
 }
 
@@ -41,24 +54,28 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser()
+    const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const { id } = await params
-    const body = await request.json()
-    const { status, assigneeId, title, description, priority, dueDate } = body
+    const { id } = await params;
+    const body = await request.json();
+    const { status, assigneeId, title, description, priority, dueDate } = body;
 
-    let task
+    let task;
 
     // Handle status change
     if (status !== undefined) {
-      task = await taskService.changeTaskStatus(id, status as TaskStatus, user.id)
+      task = await taskService.changeTaskStatus(
+        id,
+        status as TaskStatus,
+        user.id
+      );
     }
     // Handle assignment change
     else if (assigneeId !== undefined) {
-      task = await taskService.assignTask(id, assigneeId, user.id)
+      task = await taskService.assignTask(id, assigneeId, user.id);
     }
     // Handle general update
     else {
@@ -71,17 +88,20 @@ export async function PATCH(
           dueDate: dueDate ? new Date(dueDate) : undefined,
         },
         user.id
-      )
+      );
     }
 
     if (!task) {
-      return NextResponse.json({ error: 'Task not found' }, { status: 404 })
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ task })
+    return NextResponse.json({ task });
   } catch (error) {
-    console.error('Update task error:', error)
-    return NextResponse.json({ error: 'Failed to update task' }, { status: 500 })
+    console.error("Update task error:", error);
+    return NextResponse.json(
+      { error: "Failed to update task" },
+      { status: 500 }
+    );
   }
 }
 
@@ -90,21 +110,24 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser()
+    const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const { id } = await params
-    const deleted = await taskService.deleteTask(id, user.id)
+    const { id } = await params;
+    const deleted = await taskService.deleteTask(id, user.id);
 
     if (!deleted) {
-      return NextResponse.json({ error: 'Task not found' }, { status: 404 })
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ message: 'Task deleted' })
+    return NextResponse.json({ message: "Task deleted" });
   } catch (error) {
-    console.error('Delete task error:', error)
-    return NextResponse.json({ error: 'Failed to delete task' }, { status: 500 })
+    console.error("Delete task error:", error);
+    return NextResponse.json(
+      { error: "Failed to delete task" },
+      { status: 500 }
+    );
   }
 }
