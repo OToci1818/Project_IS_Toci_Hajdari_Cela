@@ -8,33 +8,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({})
   const [loading, setLoading] = useState(false)
-  const [setupLoading, setSetupLoading] = useState(false)
-  const [setupMessage, setSetupMessage] = useState('')
 
   const validateEmail = (email: string): boolean => {
     const institutionalEmailRegex = /^[a-zA-Z0-9._%+-]+@fti\.edu\.al$/
     return institutionalEmailRegex.test(email)
-  }
-
-  const handleSetupDemo = async () => {
-    setSetupLoading(true)
-    setSetupMessage('')
-    try {
-      const response = await fetch('/api/setup', { method: 'POST' })
-      const data = await response.json()
-
-      if (response.ok) {
-        setSetupMessage(`Demo user created! Email: ${data.user.email}, Password: ${data.password}`)
-        setEmail(data.user.email)
-        setPassword(data.password)
-      } else {
-        setSetupMessage(data.error || 'Failed to setup demo')
-      }
-    } catch {
-      setSetupMessage('Failed to connect to server')
-    } finally {
-      setSetupLoading(false)
-    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -83,30 +60,30 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F9FC] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
+        {/* Logo & Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-[#1A73E8] rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          <div className="w-16 h-16 bg-primary rounded-[0.625rem] flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-[#1E293B]">UniProject</h1>
-          <p className="text-[#64748B] mt-2">University Project Management System</p>
+          <h1 className="text-3xl font-bold tracking-tight text-card-foreground">UPT Projects</h1>
+          <p className="text-muted-foreground mt-2">University Project Management System</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-          <h2 className="text-xl font-semibold text-[#1E293B] mb-6">Sign in to your account</h2>
+        {/* Login Card */}
+        <div className="bg-card rounded-[0.625rem] shadow-card border border-border p-8">
+          <h2 className="text-2xl font-semibold text-card-foreground mb-6">Sign in to your account</h2>
 
           {errors.general && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-[0.625rem] text-destructive text-sm flex items-center gap-2">
+              <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               {errors.general}
-            </div>
-          )}
-
-          {setupMessage && (
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-600 text-sm">
-              {setupMessage}
             </div>
           )}
 
@@ -119,6 +96,11 @@ export default function LoginPage() {
               onChange={setEmail}
               error={errors.email}
               required
+              icon={
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                </svg>
+              }
             />
 
             <Input
@@ -129,17 +111,22 @@ export default function LoginPage() {
               onChange={setPassword}
               error={errors.password}
               required
+              icon={
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              }
             />
 
             <div className="flex items-center justify-between text-sm">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  className="w-4 h-4 rounded border-gray-300 text-[#1A73E8] focus:ring-[#1A73E8]"
+                  className="w-4 h-4 rounded border-input text-primary focus:ring-primary"
                 />
-                <span className="text-[#64748B]">Remember me</span>
+                <span className="text-muted-foreground">Remember me</span>
               </label>
-              <a href="#" className="text-[#1A73E8] hover:underline">
+              <a href="#" className="text-primary hover:underline font-medium">
                 Forgot password?
               </a>
             </div>
@@ -147,27 +134,24 @@ export default function LoginPage() {
             <Button
               type="submit"
               loading={loading}
+              size="lg"
               className="w-full mt-6"
             >
               Sign In
             </Button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-gray-100">
-            <p className="text-sm text-[#64748B] text-center mb-4">
+          <div className="mt-6 pt-6 border-t border-border">
+            <p className="text-sm text-muted-foreground text-center">
               Only institutional emails (@fti.edu.al) are accepted
             </p>
-            <Button
-              type="button"
-              variant="secondary"
-              loading={setupLoading}
-              onClick={handleSetupDemo}
-              className="w-full"
-            >
-              Setup Demo Account
-            </Button>
           </div>
         </div>
+
+        {/* Footer */}
+        <p className="text-center text-sm text-muted-foreground mt-8">
+          Need help? Contact your professor or IT support.
+        </p>
       </div>
     </div>
   )

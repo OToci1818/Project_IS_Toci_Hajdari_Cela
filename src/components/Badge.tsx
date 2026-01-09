@@ -1,6 +1,6 @@
 interface BadgeProps {
   children: React.ReactNode
-  variant?: 'default' | 'success' | 'warning' | 'danger' | 'info'
+  variant?: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'outline'
   className?: string
 }
 
@@ -10,16 +10,17 @@ export default function Badge({
   className = '',
 }: BadgeProps) {
   const variantStyles = {
-    default: 'bg-gray-100 text-[#64748B]',
-    success: 'bg-[#34A853]/10 text-[#34A853]',
-    warning: 'bg-[#FBBC05]/10 text-[#946C00]',
-    danger: 'bg-[#EA4335]/10 text-[#EA4335]',
-    info: 'bg-[#1A73E8]/10 text-[#1A73E8]',
+    default: 'bg-muted text-muted-foreground',
+    success: 'bg-success/10 text-success border border-success/20',
+    warning: 'bg-warning/10 text-warning border border-warning/20',
+    danger: 'bg-destructive/10 text-destructive border border-destructive/20',
+    info: 'bg-primary/10 text-primary border border-primary/20',
+    outline: 'bg-transparent text-muted-foreground border border-input',
   }
 
   return (
     <span className={`
-      inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+      inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
       ${variantStyles[variant]}
       ${className}
     `}>

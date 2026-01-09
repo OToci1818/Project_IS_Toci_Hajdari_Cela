@@ -4,7 +4,8 @@ interface ButtonProps {
   children: React.ReactNode
   onClick?: () => void
   type?: 'button' | 'submit' | 'reset'
-  variant?: 'primary' | 'secondary' | 'danger'
+  variant?: 'primary' | 'secondary' | 'destructive' | 'ghost'
+  size?: 'sm' | 'md' | 'lg'
   disabled?: boolean
   loading?: boolean
   className?: string
@@ -15,16 +16,24 @@ export default function Button({
   onClick,
   type = 'button',
   variant = 'primary',
+  size = 'md',
   disabled = false,
   loading = false,
   className = '',
 }: ButtonProps) {
-  const baseStyles = 'px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 hover-lift'
+  const baseStyles = 'inline-flex items-center justify-center gap-2 font-medium rounded-[0.625rem] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
 
   const variantStyles = {
-    primary: 'bg-[#1A73E8] text-white hover:bg-[#1558B0] disabled:bg-[#1A73E8]/50',
-    secondary: 'bg-white text-[#1A73E8] border-2 border-[#1A73E8] hover:bg-[#F7F9FC]',
-    danger: 'bg-[#EA4335] text-white hover:bg-[#d33426] disabled:bg-[#EA4335]/50',
+    primary: 'bg-primary text-primary-foreground hover:bg-primary-hover disabled:opacity-50',
+    secondary: 'bg-card text-card-foreground border border-input hover:bg-muted disabled:opacity-50',
+    destructive: 'text-destructive hover:bg-destructive/10 disabled:opacity-50',
+    ghost: 'text-muted-foreground hover:bg-muted hover:text-card-foreground disabled:opacity-50',
+  }
+
+  const sizeStyles = {
+    sm: 'px-3 py-1.5 text-sm',
+    md: 'px-4 py-2 text-sm',
+    lg: 'px-6 py-3 text-base',
   }
 
   return (
@@ -32,8 +41,8 @@ export default function Button({
       type={type}
       onClick={onClick}
       disabled={disabled || loading}
-      className={`${baseStyles} ${variantStyles[variant]} ${
-        disabled || loading ? 'cursor-not-allowed opacity-70' : ''
+      className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${
+        disabled || loading ? 'cursor-not-allowed' : 'hover-lift'
       } ${className}`}
     >
       {loading && (

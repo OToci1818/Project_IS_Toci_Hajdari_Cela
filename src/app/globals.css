@@ -2,153 +2,219 @@
 @tailwind components;
 @tailwind utilities;
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: #F7F9FC;
-  color: #1E293B;
-}
-
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #F7F9FC;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #64748B;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #1E293B;
-}
-
-:focus-visible {
-  outline: 2px solid #1A73E8;
-  outline-offset: 2px;
-}
-
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* Cool hover effects for interactive elements */
-
-/* Lift Effect - Button scales up and lifts with shadow */
-.hover-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.hover-lift:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-}
-
-.hover-lift:active {
-  transform: translateY(0) scale(0.98);
-}
-
-/* Glow Effect - Creates a glowing shadow effect on hover */
-.hover-glow {
-  transition: box-shadow 0.3s ease, transform 0.2s ease;
-}
-
-.hover-glow:hover {
-  box-shadow: 0 0 20px rgba(26, 115, 232, 0.4), 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: scale(1.05);
-}
-
-/* 3D Tilt Effect - Subtle 3D perspective transform */
-.hover-tilt {
-  transition: transform 0.3s ease;
-  perspective: 1000px;
-}
-
-.hover-tilt:hover {
-  transform: perspective(1000px) rotateX(2deg) rotateY(-2deg) scale(1.03);
-}
-
-/* Pulse Glow - Pulsing glow effect */
-.hover-pulse-glow {
-  transition: box-shadow 0.4s ease;
-  animation: pulse-glow 2s ease-in-out infinite;
-}
-
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 5px rgba(26, 115, 232, 0.2);
+@layer base {
+  * {
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
   }
-  50% {
-    box-shadow: 0 0 20px rgba(26, 115, 232, 0.6), 0 0 30px rgba(26, 115, 232, 0.4);
+
+  html,
+  body {
+    max-width: 100vw;
+    overflow-x: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: hsl(220, 25%, 97%);
+    color: hsl(220, 30%, 18%);
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(220, 25%, 97%);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(220, 10%, 65%);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(220, 10%, 45%);
+  }
+
+  /* Focus ring */
+  :focus-visible {
+    outline: 2px solid hsl(220, 65%, 35%);
+    outline-offset: 2px;
   }
 }
 
-.hover-pulse-glow:hover {
-  animation: none;
-  box-shadow: 0 0 25px rgba(26, 115, 232, 0.7), 0 0 40px rgba(26, 115, 232, 0.5);
-}
-
-/* Shimmer Effect - Subtle shimmer on hover */
-.hover-shimmer {
-  position: relative;
-  overflow: hidden;
-  transition: transform 0.2s ease;
-}
-
-.hover-shimmer::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.3),
-    transparent
-  );
-  transition: left 0.5s ease;
-}
-
-.hover-shimmer:hover::before {
-  left: 100%;
-}
-
-.hover-shimmer:hover {
-  transform: scale(1.05);
-}
-
-/* Gradient Text Effect - Animated gradient text */
-.gradient-text {
-  background: linear-gradient(90deg, #1A73E8, #EA4335, #1A73E8);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: gradient-shift 3s ease infinite;
-}
-
-@keyframes gradient-shift {
-  0%, 100% {
-    background-position: 0% center;
+@layer components {
+  /* Card hover effect with left accent line */
+  .card-hover {
+    position: relative;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   }
-  50% {
-    background-position: 100% center;
+
+  .card-hover::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background-color: hsl(220, 65%, 35%);
+    opacity: 0.2;
+    transition: opacity 0.2s ease;
+    border-radius: 0.625rem 0 0 0.625rem;
+  }
+
+  .card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  }
+
+  .card-hover:hover::before {
+    opacity: 1;
+  }
+
+  /* Button base styles */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    border-radius: 0.625rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Primary button */
+  .btn-primary {
+    background-color: hsl(220, 65%, 35%);
+    color: white;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background-color: hsl(220, 65%, 28%);
+  }
+
+  /* Secondary/Outline button */
+  .btn-secondary {
+    background-color: transparent;
+    border: 1px solid hsl(220, 15%, 85%);
+    color: hsl(220, 30%, 18%);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background-color: hsl(220, 15%, 94%);
+  }
+
+  /* Destructive button */
+  .btn-destructive {
+    color: hsl(0, 72%, 51%);
+    background-color: transparent;
+  }
+
+  .btn-destructive:hover:not(:disabled) {
+    background-color: hsl(0, 72%, 96%);
+  }
+
+  /* Stats card icon container */
+  .stats-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .stats-icon-primary {
+    background-color: hsl(220, 65%, 35%, 0.1);
+    color: hsl(220, 65%, 35%);
+  }
+
+  .stats-icon-success {
+    background-color: hsl(152, 60%, 40%, 0.1);
+    color: hsl(152, 60%, 40%);
+  }
+
+  .stats-icon-warning {
+    background-color: hsl(38, 92%, 50%, 0.1);
+    color: hsl(38, 92%, 50%);
+  }
+
+  .stats-icon-destructive {
+    background-color: hsl(0, 72%, 51%, 0.1);
+    color: hsl(0, 72%, 51%);
+  }
+
+  /* Alert/Tip box */
+  .alert-warning {
+    border: 1px solid hsl(38, 92%, 50%, 0.3);
+    background-color: hsl(38, 92%, 50%, 0.05);
+    border-radius: 0.625rem;
+    padding: 1rem;
+  }
+
+  /* Empty state container */
+  .empty-state {
+    border: 2px dashed hsl(220, 15%, 85%);
+    border-radius: 0.625rem;
+    padding: 3rem;
+    text-align: center;
+  }
+
+  /* Navbar blur effect */
+  .navbar-blur {
+    background-color: hsl(0, 0%, 100%, 0.95);
+    backdrop-filter: blur(12px);
+  }
+}
+
+@layer utilities {
+  /* Line clamp utilities */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Lift hover effect */
+  .hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  }
+
+  .hover-lift:active {
+    transform: translateY(0);
+  }
+
+  /* Glow hover effect */
+  .hover-glow {
+    transition: box-shadow 0.3s ease;
+  }
+
+  .hover-glow:hover {
+    box-shadow: 0 0 20px hsl(220, 65%, 35%, 0.3);
+  }
+
+  /* Tracking tight */
+  .tracking-tight {
+    letter-spacing: -0.025em;
   }
 }

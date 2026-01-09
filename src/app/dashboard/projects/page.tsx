@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { Card, Badge, Button, Input, Modal } from '@/components'
 
-// Mock data
 const mockProjects = [
   {
     id: '1',
@@ -79,8 +78,6 @@ export default function ProjectsPage() {
   const [sort, setSort] = useState('newest')
   const [search, setSearch] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
-
-  // New project form state
   const [newProject, setNewProject] = useState({
     title: '',
     description: '',
@@ -89,7 +86,6 @@ export default function ProjectsPage() {
     type: 'group',
   })
 
-  // Filter and search
   const filteredProjects = mockProjects
     .filter((p) => filter === 'all' || p.status === filter)
     .filter((p) =>
@@ -115,39 +111,38 @@ export default function ProjectsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-[#1E293B]">Projects</h1>
-          <p className="text-[#64748B] mt-1">Manage your university projects</p>
+          <h1 className="text-3xl font-bold tracking-tight text-card-foreground">Projects</h1>
+          <p className="text-muted-foreground mt-1">Manage your university projects</p>
         </div>
         <Button onClick={() => setShowCreateModal(true)}>
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          New Project
+          Create Project
         </Button>
       </div>
 
-      {/* Filters */}
+      {/* Filters Card */}
       <Card className="mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <svg className="w-5 h-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+          </svg>
+          <span className="text-sm font-medium text-muted-foreground">Filters:</span>
+        </div>
         <div className="flex flex-wrap items-center gap-4">
           {/* Search */}
           <div className="flex-1 min-w-[200px]">
-            <div className="relative">
-              <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#64748B]"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search projects..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1A73E8]/20 focus:border-[#1A73E8]"
-              />
-            </div>
+            <Input
+              placeholder="Search projects..."
+              value={search}
+              onChange={setSearch}
+              icon={
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              }
+            />
           </div>
 
           {/* Status Filter */}
@@ -156,10 +151,10 @@ export default function ProjectsPage() {
               <button
                 key={status}
                 onClick={() => setFilter(status)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                className={`px-3 py-2 rounded-[0.625rem] text-sm font-medium transition-all ${
                   filter === status
-                    ? 'bg-[#1A73E8] text-white'
-                    : 'bg-gray-100 text-[#64748B] hover:bg-gray-200'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
                 }`}
               >
                 {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -171,7 +166,7 @@ export default function ProjectsPage() {
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
-            className="px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#1A73E8]/20 focus:border-[#1A73E8]"
+            className="px-3 py-2.5 rounded-[0.625rem] border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           >
             {sortOptions.map((option) => (
               <option key={option.value} value={option.value}>
@@ -183,36 +178,41 @@ export default function ProjectsPage() {
       </Card>
 
       {/* Projects Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredProjects.map((project) => (
           <Card key={project.id} hoverable>
             <div className="flex items-start justify-between mb-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-semibold text-[#1E293B]">{project.title}</h3>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <h3 className="font-semibold text-card-foreground truncate">{project.title}</h3>
                   {getStatusBadge(project.status)}
                 </div>
-                <p className="text-sm text-[#64748B]">{project.course}</p>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  {project.course}
+                </div>
               </div>
-              <Badge variant={project.type === 'group' ? 'info' : 'default'}>
+              <Badge variant={project.type === 'group' ? 'info' : 'outline'}>
                 {project.type}
               </Badge>
             </div>
 
-            <p className="text-sm text-[#64748B] mb-4 line-clamp-2">
+            <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
               {project.description}
             </p>
 
             {/* Progress */}
             <div className="mb-4">
-              <div className="flex items-center justify-between text-sm mb-1">
-                <span className="text-[#64748B]">Progress</span>
-                <span className="font-medium text-[#1E293B]">{project.progress}%</span>
+              <div className="flex items-center justify-between text-sm mb-2">
+                <span className="text-muted-foreground">Progress</span>
+                <span className="font-medium text-card-foreground">{project.progress}%</span>
               </div>
-              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all ${
-                    project.progress === 100 ? 'bg-[#34A853]' : 'bg-[#1A73E8]'
+                    project.progress === 100 ? 'bg-success' : 'bg-primary'
                   }`}
                   style={{ width: `${project.progress}%` }}
                 />
@@ -220,37 +220,44 @@ export default function ProjectsPage() {
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-              <div className="flex items-center gap-4 text-sm text-[#64748B]">
-                <span className="flex items-center gap-1">
+            <div className="flex items-center justify-between pt-4 border-t border-border">
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1" title="Team members">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                   </svg>
                   {project.members}
                 </span>
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1" title="Tasks completed">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                   </svg>
                   {project.tasks.done}/{project.tasks.total}
                 </span>
               </div>
-              <span className="text-sm text-[#64748B]">
-                Due: {project.deadline}
+              <span className="flex items-center gap-1 text-sm text-muted-foreground" title="Deadline">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                {project.deadline}
               </span>
             </div>
           </Card>
         ))}
       </div>
 
+      {/* Empty State */}
       {filteredProjects.length === 0 && (
-        <Card className="text-center py-12">
-          <svg className="w-12 h-12 text-[#64748B] mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+        <div className="empty-state">
+          <svg className="w-12 h-12 text-muted-foreground mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
           </svg>
-          <h3 className="text-lg font-medium text-[#1E293B] mb-2">No projects found</h3>
-          <p className="text-[#64748B]">Try adjusting your search or filter criteria</p>
-        </Card>
+          <h3 className="text-lg font-semibold text-card-foreground mb-2">No projects found</h3>
+          <p className="text-muted-foreground mb-4">Try adjusting your search or filter criteria</p>
+          <Button onClick={() => { setFilter('all'); setSearch(''); }}>
+            Clear Filters
+          </Button>
+        </div>
       )}
 
       {/* Create Project Modal */}
@@ -277,13 +284,13 @@ export default function ProjectsPage() {
             onChange={(value) => setNewProject({ ...newProject, title: value })}
             required
           />
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-[#1E293B]">Description</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-card-foreground">Description</label>
             <textarea
               placeholder="Describe your project..."
               value={newProject.description}
               onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-              className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1A73E8]/20 focus:border-[#1A73E8] min-h-[100px] resize-none"
+              className="px-4 py-2.5 rounded-[0.625rem] border border-input bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[100px] resize-none text-card-foreground placeholder:text-muted-foreground"
             />
           </div>
           <Input
@@ -300,8 +307,8 @@ export default function ProjectsPage() {
             onChange={(value) => setNewProject({ ...newProject, deadline: value })}
             required
           />
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-[#1E293B]">Project Type</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-card-foreground">Project Type</label>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -310,9 +317,9 @@ export default function ProjectsPage() {
                   value="group"
                   checked={newProject.type === 'group'}
                   onChange={() => setNewProject({ ...newProject, type: 'group' })}
-                  className="text-[#1A73E8] focus:ring-[#1A73E8]"
+                  className="text-primary focus:ring-primary"
                 />
-                <span className="text-[#1E293B]">Group</span>
+                <span className="text-card-foreground">Group</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -321,9 +328,9 @@ export default function ProjectsPage() {
                   value="individual"
                   checked={newProject.type === 'individual'}
                   onChange={() => setNewProject({ ...newProject, type: 'individual' })}
-                  className="text-[#1A73E8] focus:ring-[#1A73E8]"
+                  className="text-primary focus:ring-primary"
                 />
-                <span className="text-[#1E293B]">Individual</span>
+                <span className="text-card-foreground">Individual</span>
               </label>
             </div>
           </div>

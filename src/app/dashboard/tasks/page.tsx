@@ -19,9 +19,9 @@ interface Task {
 }
 
 const columns = [
-  { id: 'to_do', title: 'To Do', color: '#64748B' },
-  { id: 'in_progress', title: 'In Progress', color: '#1A73E8' },
-  { id: 'done', title: 'Done', color: '#34A853' },
+  { id: 'to_do', title: 'To Do', color: 'hsl(220, 10%, 45%)' },
+  { id: 'in_progress', title: 'In Progress', color: 'hsl(220, 65%, 35%)' },
+  { id: 'done', title: 'Done', color: 'hsl(152, 60%, 40%)' },
 ]
 
 export default function TasksPage() {
@@ -107,7 +107,6 @@ export default function TasksPage() {
       return
     }
 
-    // Optimistic update
     setTasks(tasks.map((t) =>
       t.id === draggedTask
         ? { ...t, status: newStatus as Task['status'] }
@@ -115,7 +114,6 @@ export default function TasksPage() {
     ))
     setDraggedTask(null)
 
-    // Update on server
     try {
       const response = await fetch(`/api/tasks/${draggedTask}`, {
         method: 'PATCH',
@@ -124,7 +122,6 @@ export default function TasksPage() {
       })
 
       if (!response.ok) {
-        // Revert on error
         fetchTasks()
       }
     } catch {
@@ -164,7 +161,13 @@ export default function TasksPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-[#64748B]">Loading tasks...</div>
+        <div className="flex items-center gap-3 text-muted-foreground">
+          <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          Loading tasks...
+        </div>
       </div>
     )
   }
@@ -172,17 +175,23 @@ export default function TasksPage() {
   if (error) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-red-500">{error}</div>
+        <div className="text-destructive flex items-center gap-2">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {error}
+        </div>
       </div>
     )
   }
 
   return (
     <div>
+      {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-[#1E293B]">Tasks</h1>
-          <p className="text-[#64748B] mt-1">Manage your tasks with Kanban board</p>
+          <h1 className="text-3xl font-bold tracking-tight text-card-foreground">Tasks</h1>
+          <p className="text-muted-foreground mt-1">Manage your tasks with Kanban board</p>
         </div>
         <Button onClick={() => setShowCreateModal(true)} disabled={!projectId}>
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -193,18 +202,19 @@ export default function TasksPage() {
       </div>
 
       {tasks.length === 0 ? (
-        <Card className="p-8 text-center">
-          <p className="text-[#64748B] mb-4">No tasks yet. Create your first task!</p>
-          <p className="text-sm text-[#94A3B8]">
-            Click the &quot;Setup Demo Account&quot; button on the login page to create demo data.
-          </p>
-        </Card>
+        <div className="empty-state">
+          <svg className="w-12 h-12 text-muted-foreground mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          <h3 className="text-lg font-semibold text-card-foreground mb-2">No tasks yet</h3>
+          <p className="text-muted-foreground">Create your first task to get started!</p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {columns.map((column) => (
             <div
               key={column.id}
-              className="bg-gray-50 rounded-xl p-4 min-h-[500px]"
+              className="bg-muted/50 rounded-[0.625rem] p-4 min-h-[500px]"
               onDragOver={handleDragOver}
               onDrop={() => handleDrop(column.id)}
             >
@@ -214,9 +224,9 @@ export default function TasksPage() {
                     className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: column.color }}
                   />
-                  <h3 className="font-semibold text-[#1E293B]">{column.title}</h3>
+                  <h3 className="font-semibold text-card-foreground">{column.title}</h3>
                 </div>
-                <span className="text-sm text-[#64748B] bg-white px-2 py-1 rounded-full">
+                <span className="text-sm text-muted-foreground bg-card px-2 py-1 rounded-full border border-border">
                   {getTasksByStatus(column.id).length}
                 </span>
               </div>
@@ -227,17 +237,17 @@ export default function TasksPage() {
                     key={task.id}
                     draggable
                     onDragStart={() => handleDragStart(task.id)}
-                    className={`bg-white rounded-lg p-4 shadow-sm border border-gray-100 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${
+                    className={`bg-card rounded-[0.625rem] p-4 shadow-card border border-border cursor-grab active:cursor-grabbing hover:shadow-card-hover hover:border-primary/20 transition-all ${
                       draggedTask === task.id ? 'opacity-50' : ''
                     }`}
                   >
                     <div className="flex items-start justify-between mb-2">
-                      <h4 className="font-medium text-[#1E293B] text-sm">{task.title}</h4>
+                      <h4 className="font-medium text-card-foreground text-sm">{task.title}</h4>
                       {getPriorityBadge(task.priority)}
                     </div>
 
                     {task.description && (
-                      <p className="text-xs text-[#64748B] mb-3 line-clamp-2">
+                      <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
                         {task.description}
                       </p>
                     )}
@@ -245,16 +255,19 @@ export default function TasksPage() {
                     <div className="flex items-center justify-between">
                       {task.assignee && (
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 bg-[#1A73E8]/10 rounded-full flex items-center justify-center">
-                            <span className="text-[10px] font-medium text-[#1A73E8]">
+                          <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center">
+                            <span className="text-[10px] font-medium text-primary">
                               {getInitials(task.assignee.fullName)}
                             </span>
                           </div>
-                          <span className="text-xs text-[#64748B]">{task.assignee.fullName}</span>
+                          <span className="text-xs text-muted-foreground">{task.assignee.fullName}</span>
                         </div>
                       )}
                       {task.dueDate && (
-                        <span className="text-xs text-[#64748B]">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
                           {new Date(task.dueDate).toLocaleDateString()}
                         </span>
                       )}
@@ -263,7 +276,7 @@ export default function TasksPage() {
                 ))}
 
                 {getTasksByStatus(column.id).length === 0 && (
-                  <div className="text-center py-8 text-[#64748B] text-sm">
+                  <div className="text-center py-8 text-muted-foreground text-sm border-2 border-dashed border-border rounded-[0.625rem]">
                     No tasks here
                   </div>
                 )}
@@ -273,6 +286,7 @@ export default function TasksPage() {
         </div>
       )}
 
+      {/* Create Task Modal */}
       <Modal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
@@ -296,21 +310,21 @@ export default function TasksPage() {
             onChange={(value) => setNewTask({ ...newTask, title: value })}
             required
           />
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-[#1E293B]">Description</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-card-foreground">Description</label>
             <textarea
               placeholder="Describe the task..."
               value={newTask.description}
               onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-              className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1A73E8]/20 focus:border-[#1A73E8] min-h-[80px] resize-none"
+              className="px-4 py-2.5 rounded-[0.625rem] border border-input bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[80px] resize-none text-card-foreground placeholder:text-muted-foreground"
             />
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-[#1E293B]">Priority</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-card-foreground">Priority</label>
             <select
               value={newTask.priority}
               onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
-              className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1A73E8]/20 focus:border-[#1A73E8]"
+              className="px-4 py-2.5 rounded-[0.625rem] border border-input bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-card-foreground"
             >
               <option value="low">Low</option>
               <option value="medium">Medium</option>
