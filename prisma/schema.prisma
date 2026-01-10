@@ -44,6 +44,26 @@ enum ProjectType {
   group
 }
 
+enum NotificationType {
+  // Invite-related
+  invite_accepted
+  invite_declined
+  invite_received
+  // Task-related
+  task_assigned
+  task_completed
+  task_status_changed
+  task_due_approaching
+  task_overdue
+  // Project-related
+  project_deadline_approaching
+  project_completed
+  removed_from_project
+  // Team-related
+  member_joined
+  member_left
+}
+
 model User {
   id           String    @id @default(uuid())
   email        String    @unique
@@ -57,15 +77,18 @@ model User {
   lastLoginAt DateTime? @map("last_login_at")
   deletedAt   DateTime? @map("deleted_at")
 
-  sessions         Session[]
-  ledProjects      Project[]       @relation("TeamLeader")
-  projectMembers   ProjectUser[]   @relation("Member")
-  invitesSent      ProjectUser[]   @relation("InvitedBy")
-  assignedTasks    Task[]          @relation("Assignee")
-  createdTasks     Task[]          @relation("TaskCreator")
-  taskChanges      TaskHistory[]
-  uploadedFiles    File[]
-  activityLogs     ActivityLog[]
+  sessions               Session[]
+  ledProjects            Project[]       @relation("TeamLeader")
+  projectMembers         ProjectUser[]   @relation("Member")
+  invitesSent            ProjectUser[]   @relation("InvitedBy")
+  assignedTasks          Task[]          @relation("Assignee")
+  createdTasks           Task[]          @relation("TaskCreator")
+  taskChanges            TaskHistory[]
+  uploadedFiles          File[]
+  comments               Comment[]
+  activityLogs           ActivityLog[]
+  notificationsReceived  Notification[]  @relation("NotificationRecipient")
+  notificationsTriggered Notification[]  @relation("NotificationActor")
 
   @@map("users")
 }
@@ -97,9 +120,10 @@ model Project {
   updatedAt    DateTime      @updatedAt @map("updated_at")
   deletedAt    DateTime?     @map("deleted_at")
 
-  teamLeader   User          @relation("TeamLeader", fields: [teamLeaderId], references: [id])
-  members      ProjectUser[]
-  tasks        Task[]
+  teamLeader    User           @relation("TeamLeader", fields: [teamLeaderId], references: [id])
+  members       ProjectUser[]
+  tasks         Task[]
+  notifications Notification[]
 
   @@map("projects")
 }
@@ -137,11 +161,13 @@ model Task {
   isDeleted   Boolean      @default(false) @map("is_deleted")
   deletedAt   DateTime?    @map("deleted_at")
 
-  project   Project       @relation(fields: [projectId], references: [id])
-  assignee  User?         @relation("Assignee", fields: [assigneeId], references: [id])
-  createdBy User          @relation("TaskCreator", fields: [createdById], references: [id])
-  history   TaskHistory[]
-  files     File[]
+  project       Project        @relation(fields: [projectId], references: [id])
+  assignee      User?          @relation("Assignee", fields: [assigneeId], references: [id])
+  createdBy     User           @relation("TaskCreator", fields: [createdById], references: [id])
+  history       TaskHistory[]
+  files         File[]
+  comments      Comment[]
+  notifications Notification[]
 
   @@map("tasks")
 }
@@ -179,6 +205,20 @@ model File {
   @@map("files")
 }
 
+model Comment {
+  id        String   @id @default(uuid())
+  taskId    String   @map("task_id")
+  authorId  String   @map("author_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  task   Task @relation(fields: [taskId], references: [id])
+  author User @relation(fields: [authorId], references: [id])
+
+  @@map("comments")
+}
+
 model ActivityLog {
   id           String   @id @default(uuid())
   userId       String   @map("user_id")
@@ -191,4 +231,33 @@ model ActivityLog {
   user User @relation(fields: [userId], references: [id])
 
   @@map("activity_logs")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false) @map("is_read")
+
+  // Related entities (optional, for navigation)
+  projectId String?          @map("project_id")
+  taskId    String?          @map("task_id")
+  actorId   String?          @map("actor_id")
+
+  // Metadata for additional context
+  metadata  Json?
+
+  createdAt DateTime         @default(now()) @map("created_at")
+  readAt    DateTime?        @map("read_at")
+
+  user    User     @relation("NotificationRecipient", fields: [userId], references: [id])
+  project Project? @relation(fields: [projectId], references: [id])
+  task    Task?    @relation(fields: [taskId], references: [id])
+  actor   User?    @relation("NotificationActor", fields: [actorId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
 }
