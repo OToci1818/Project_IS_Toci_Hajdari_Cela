@@ -58,6 +58,21 @@ export interface Task {
   assignee?: User
 }
 
+export interface Comment {
+  id: string
+  taskId: string
+  authorId: string
+  content: string
+  createdAt: Date
+  updatedAt: Date
+  author?: {
+    id: string
+    fullName: string
+    email: string
+    avatarUrl?: string
+  }
+}
+
 export interface ApiResponse<T> {
   data?: T
   error?: string
