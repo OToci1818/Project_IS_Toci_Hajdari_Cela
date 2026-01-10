@@ -8,6 +8,13 @@ interface ModalProps {
   title: string
   children: React.ReactNode
   footer?: React.ReactNode
+  size?: 'sm' | 'md' | 'lg'
+}
+
+const sizeStyles = {
+  sm: 'max-w-sm',
+  md: 'max-w-md',
+  lg: 'max-w-2xl',
 }
 
 export default function Modal({
@@ -16,6 +23,7 @@ export default function Modal({
   title,
   children,
   footer,
+  size = 'md',
 }: ModalProps) {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -44,7 +52,7 @@ export default function Modal({
       />
 
       {/* Modal content */}
-      <div className="relative bg-card rounded-[0.625rem] shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-hidden border border-border">
+      <div className={`relative bg-card rounded-[0.625rem] shadow-xl ${sizeStyles[size]} w-full mx-4 max-h-[90vh] overflow-hidden border border-border`}>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h2 className="text-lg font-semibold text-card-foreground">{title}</h2>
@@ -59,7 +67,7 @@ export default function Modal({
         </div>
 
         {/* Body */}
-        <div className="p-4 overflow-y-auto">
+        <div className="p-4 overflow-y-auto max-h-[calc(90vh-8rem)]">
           {children}
         </div>
 

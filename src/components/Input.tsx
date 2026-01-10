@@ -11,6 +11,7 @@ interface InputProps {
   disabled?: boolean
   className?: string
   icon?: React.ReactNode
+  suffix?: React.ReactNode
 }
 
 export default function Input({
@@ -24,6 +25,7 @@ export default function Input({
   disabled = false,
   className = '',
   icon,
+  suffix,
 }: InputProps) {
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
@@ -49,11 +51,17 @@ export default function Input({
             w-full px-4 py-2.5 rounded-[0.625rem] border transition-all duration-200
             focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary
             ${icon ? 'pl-10' : ''}
+            ${suffix ? 'pr-10' : ''}
             ${error ? 'border-destructive bg-destructive/5' : 'border-input'}
             ${disabled ? 'bg-muted cursor-not-allowed' : 'bg-card'}
             text-card-foreground placeholder:text-muted-foreground
           `}
         />
+        {suffix && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+            {suffix}
+          </div>
+        )}
       </div>
       {error && (
         <span className="text-sm text-destructive">{error}</span>

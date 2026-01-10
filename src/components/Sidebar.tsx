@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
+import { useInvites } from '@/contexts/InviteContext'
+import NotificationBell from './NotificationBell'
 
 const navItems = [
   {
@@ -24,8 +26,8 @@ const navItems = [
     ),
   },
   {
-    name: 'Tasks',
-    href: '/dashboard/tasks',
+    name: 'My Tasks',
+    href: '/dashboard/my-tasks',
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -33,11 +35,30 @@ const navItems = [
     ),
   },
   {
+    name: 'Invites',
+    href: '/dashboard/invites',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      </svg>
+    ),
+    hasBadge: true,
+  },
+  {
     name: 'Team',
     href: '/dashboard/team',
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+      </svg>
+    ),
+  },
+  {
+    name: 'Notifications',
+    href: '/dashboard/notifications',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
       </svg>
     ),
   },
@@ -52,21 +73,32 @@ export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
+  const { inviteCount, setInviteCount } = useInvites()
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/auth/me')
-        if (response.ok) {
-          const data = await response.json()
+        // Fetch user and invites in parallel
+        const [userResponse, invitesResponse] = await Promise.all([
+          fetch('/api/auth/me'),
+          fetch('/api/invites'),
+        ])
+
+        if (userResponse.ok) {
+          const data = await userResponse.json()
           setUser(data.user)
         }
+
+        if (invitesResponse.ok) {
+          const data = await invitesResponse.json()
+          setInviteCount(data.invites?.length || 0)
+        }
       } catch {
-        // User not authenticated
+        // User not authenticated or error
       }
     }
-    fetchUser()
-  }, [])
+    fetchData()
+  }, [setInviteCount])
 
   const handleLogout = async () => {
     try {
@@ -110,6 +142,7 @@ export default function Sidebar() {
         <ul className="space-y-1">
           {navItems.map((item) => {
             const isActive = pathname === item.href
+            const showBadge = item.hasBadge && inviteCount > 0
             return (
               <li key={item.name}>
                 <Link
@@ -123,7 +156,15 @@ export default function Sidebar() {
                   `}
                 >
                   {item.icon}
-                  <span className="font-medium">{item.name}</span>
+                  <span className="font-medium flex-1">{item.name}</span>
+                  {showBadge && (
+                    <span className={`
+                      px-2 py-0.5 text-xs font-semibold rounded-full
+                      ${isActive ? 'bg-primary-foreground text-primary' : 'bg-primary text-primary-foreground'}
+                    `}>
+                      {inviteCount}
+                    </span>
+                  )}
                 </Link>
               </li>
             )
@@ -147,6 +188,7 @@ export default function Sidebar() {
               {user?.email || ''}
             </p>
           </div>
+          <NotificationBell />
           <button
             onClick={handleLogout}
             className="text-sidebar-muted hover:text-destructive transition-colors p-2 rounded-[0.625rem] hover:bg-destructive/10"

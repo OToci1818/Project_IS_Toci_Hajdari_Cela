@@ -8,97 +8,113 @@ interface User {
   fullName: string
 }
 
-const stats = [
-  {
-    label: 'Total Projects',
-    value: '12',
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-      </svg>
-    ),
-    color: 'primary'
-  },
-  {
-    label: 'Active Tasks',
-    value: '28',
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-      </svg>
-    ),
-    color: 'warning'
-  },
-  {
-    label: 'Completed',
-    value: '45',
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    color: 'success'
-  },
-  {
-    label: 'Team Members',
-    value: '8',
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-      </svg>
-    ),
-    color: 'destructive'
-  },
-]
+interface DashboardStats {
+  totalProjects: number
+  completedProjects: number
+  activeTasks: number
+  completedTasks: number
+  teamMembersCount: number
+}
 
-const recentProjects = [
-  {
-    id: '1',
-    title: 'Database Management System',
-    course: 'CS301',
-    status: 'active',
-    progress: 65,
-    deadline: '2025-01-15',
-  },
-  {
-    id: '2',
-    title: 'Web Application Development',
-    course: 'CS401',
-    status: 'active',
-    progress: 40,
-    deadline: '2025-01-20',
-  },
-  {
-    id: '3',
-    title: 'Machine Learning Project',
-    course: 'CS450',
-    status: 'completed',
-    progress: 100,
-    deadline: '2024-12-01',
-  },
-]
+interface RecentProject {
+  id: string
+  title: string
+  courseCode?: string
+  status: string
+  progress: number
+  deadlineDate?: string
+}
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [recentProjects, setRecentProjects] = useState<RecentProject[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/auth/me')
-        if (response.ok) {
-          const data = await response.json()
-          setUser(data.user)
+        // Fetch user and dashboard data in parallel
+        const [userResponse, dashboardResponse] = await Promise.all([
+          fetch('/api/auth/me'),
+          fetch('/api/dashboard/stats'),
+        ])
+
+        if (userResponse.ok) {
+          const userData = await userResponse.json()
+          setUser(userData.user)
         }
-      } catch {
-        // Handle error
+
+        if (dashboardResponse.ok) {
+          const dashboardData = await dashboardResponse.json()
+          setStats(dashboardData.stats)
+          setRecentProjects(dashboardData.recentProjects)
+        }
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error)
+      } finally {
+        setLoading(false)
       }
     }
-    fetchUser()
+
+    fetchData()
   }, [])
 
   const getFirstName = (fullName: string) => {
     return fullName.split(' ')[0]
   }
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'No deadline'
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
+  }
+
+  const statsConfig = [
+    {
+      label: 'Total Projects',
+      value: stats?.totalProjects ?? 0,
+      icon: (
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+        </svg>
+      ),
+      color: 'primary'
+    },
+    {
+      label: 'Active Tasks',
+      value: stats?.activeTasks ?? 0,
+      icon: (
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        </svg>
+      ),
+      color: 'warning'
+    },
+    {
+      label: 'Completed Tasks',
+      value: stats?.completedTasks ?? 0,
+      icon: (
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+      color: 'success'
+    },
+    {
+      label: 'Team Members',
+      value: stats?.teamMembersCount ?? 0,
+      icon: (
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      ),
+      color: 'destructive'
+    },
+  ]
 
   return (
     <div>
@@ -112,14 +128,16 @@ export default function DashboardPage() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {stats.map((stat) => (
+        {statsConfig.map((stat) => (
           <Card key={stat.label}>
             <div className="flex items-center gap-4">
               <div className={`stats-icon stats-icon-${stat.color}`}>
                 {stat.icon}
               </div>
               <div>
-                <p className="text-2xl font-bold text-card-foreground">{stat.value}</p>
+                <p className="text-2xl font-bold text-card-foreground">
+                  {loading ? '...' : stat.value}
+                </p>
                 <p className="text-sm text-muted-foreground">{stat.label}</p>
               </div>
             </div>
@@ -153,58 +171,74 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        <div className="space-y-4">
-          {recentProjects.map((project) => (
-            <div
-              key={project.id}
-              className="flex items-center justify-between p-4 rounded-[0.625rem] border border-border hover:border-primary/30 hover:bg-muted/50 transition-all cursor-pointer group"
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : recentProjects.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground mb-4">No projects yet</p>
+            <Link
+              href="/dashboard/projects"
+              className="text-primary font-medium hover:underline"
             >
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-1">
-                  <h3 className="font-medium text-card-foreground group-hover:text-primary transition-colors">
-                    {project.title}
-                  </h3>
-                  <Badge variant={project.status === 'completed' ? 'success' : 'info'}>
-                    {project.status}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                    </svg>
-                    {project.course}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Due: {project.deadline}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          project.progress === 100 ? 'bg-success' : 'bg-primary'
-                        }`}
-                        style={{ width: `${project.progress}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium text-card-foreground w-10">{project.progress}%</span>
+              Create your first project
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {recentProjects.map((project) => (
+              <div
+                key={project.id}
+                className="flex items-center justify-between p-4 rounded-[0.625rem] border border-border hover:border-primary/30 hover:bg-muted/50 transition-all cursor-pointer group"
+              >
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-1">
+                    <h3 className="font-medium text-card-foreground group-hover:text-primary transition-colors">
+                      {project.title}
+                    </h3>
+                    <Badge variant={project.status === 'completed' ? 'success' : 'info'}>
+                      {project.status}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
+                      {project.courseCode || 'No course'}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      Due: {formatDate(project.deadlineDate)}
+                    </span>
                   </div>
                 </div>
-                <span className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity text-sm">
-                  View Details →
-                </span>
+
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            project.progress === 100 ? 'bg-success' : 'bg-primary'
+                          }`}
+                          style={{ width: `${project.progress}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-medium text-card-foreground w-10">{project.progress}%</span>
+                    </div>
+                  </div>
+                  <span className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity text-sm">
+                    View Details →
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </Card>
     </div>
   )
