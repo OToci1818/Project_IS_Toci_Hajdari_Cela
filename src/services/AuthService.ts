@@ -220,7 +220,7 @@ class AuthService {
           action,
           resourceType,
           resourceId,
-          details: details ?? undefined,
+          details: details as object | undefined,
         },
       })
     } catch (error) {

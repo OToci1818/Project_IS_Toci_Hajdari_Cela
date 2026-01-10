@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { Task, TaskStatus, TaskPriority } from '@/types'
 import { TaskStatus as PrismaTaskStatus, TaskPriority as PrismaTaskPriority } from '@prisma/client'
+import { notificationService } from './NotificationService'
 
 export interface CreateTaskInput {
   projectId: string
@@ -20,7 +21,7 @@ export interface UpdateTaskInput {
   ordinal?: number
 }
 
-export interface TaskWithAssignee extends Task {
+export interface TaskWithAssignee extends Omit<Task, 'assignee'> {
   assignee?: {
     id: string
     fullName: string
@@ -30,6 +31,10 @@ export interface TaskWithAssignee extends Task {
   createdBy?: {
     id: string
     fullName: string
+  }
+  project?: {
+    id: string
+    title: string
   }
 }
 
@@ -100,6 +105,27 @@ class TaskService {
     // Log activity
     await this.logActivity(createdById, 'create_task', 'task', task.id, { title })
 
+    // Send notification if task is assigned to someone other than the creator
+    if (assigneeId && assigneeId !== createdById) {
+      const project = await prisma.project.findUnique({
+        where: { id: projectId },
+        select: { id: true, title: true },
+      })
+      const creator = await prisma.user.findUnique({
+        where: { id: createdById },
+        select: { id: true, fullName: true },
+      })
+
+      if (project && creator) {
+        await notificationService.notifyTaskAssigned(
+          assigneeId,
+          creator,
+          { id: task.id, title: task.title },
+          project
+        )
+      }
+    }
+
     return this.mapToTaskType(task)
   }
 
@@ -110,7 +136,7 @@ class TaskService {
     taskId: string,
     input: UpdateTaskInput,
     updatedById: string
-  ): Promise<Task | null> {
+  ): Promise<TaskWithAssignee | null> {
     const existingTask = await prisma.task.findUnique({
       where: { id: taskId, isDeleted: false },
     })
@@ -151,9 +177,14 @@ class TaskService {
     newStatus: TaskStatus,
     changedById: string,
     comment?: string
-  ): Promise<Task | null> {
+  ): Promise<TaskWithAssignee | null> {
     const existingTask = await prisma.task.findUnique({
       where: { id: taskId, isDeleted: false },
+      include: {
+        project: {
+          select: { id: true, title: true, teamLeaderId: true },
+        },
+      },
     })
 
     if (!existingTask) {
@@ -190,6 +221,43 @@ class TaskService {
       newStatus,
     })
 
+    // Send notifications
+    const changer = await prisma.user.findUnique({
+      where: { id: changedById },
+      select: { id: true, fullName: true },
+    })
+
+    if (changer && existingTask.project) {
+      const project = { id: existingTask.project.id, title: existingTask.project.title }
+      const taskInfo = { id: task.id, title: task.title }
+
+      // Collect recipients: task creator and team leader
+      const recipientIds: string[] = []
+      if (existingTask.createdById) recipientIds.push(existingTask.createdById)
+      if (existingTask.project.teamLeaderId && !recipientIds.includes(existingTask.project.teamLeaderId)) {
+        recipientIds.push(existingTask.project.teamLeaderId)
+      }
+
+      if (newStatus === 'done') {
+        // Task completed notification
+        await notificationService.notifyTaskCompleted(
+          recipientIds,
+          changer,
+          taskInfo,
+          project
+        )
+      } else {
+        // General status change notification
+        await notificationService.notifyTaskStatusChanged(
+          recipientIds,
+          changer,
+          taskInfo,
+          project,
+          newStatus
+        )
+      }
+    }
+
     return this.mapToTaskType(task)
   }
 
@@ -201,9 +269,14 @@ class TaskService {
     assigneeId: string | null,
     changedById: string,
     comment?: string
-  ): Promise<Task | null> {
+  ): Promise<TaskWithAssignee | null> {
     const existingTask = await prisma.task.findUnique({
       where: { id: taskId, isDeleted: false },
+      include: {
+        project: {
+          select: { id: true, title: true },
+        },
+      },
     })
 
     if (!existingTask) {
@@ -239,6 +312,23 @@ class TaskService {
       previousAssignee,
       newAssignee: assigneeId,
     })
+
+    // Send notification to new assignee (if different from the person making the change)
+    if (assigneeId && assigneeId !== changedById && existingTask.project) {
+      const assigner = await prisma.user.findUnique({
+        where: { id: changedById },
+        select: { id: true, fullName: true },
+      })
+
+      if (assigner) {
+        await notificationService.notifyTaskAssigned(
+          assigneeId,
+          assigner,
+          { id: task.id, title: task.title },
+          { id: existingTask.project.id, title: existingTask.project.title }
+        )
+      }
+    }
 
     return this.mapToTaskType(task)
   }
@@ -402,6 +492,12 @@ class TaskService {
             fullName: task.createdBy.fullName,
           }
         : undefined,
+      project: task.project
+        ? {
+            id: task.project.id,
+            title: task.project.title,
+          }
+        : undefined,
     }))
   }
 
@@ -501,7 +597,7 @@ class TaskService {
           action,
           resourceType,
           resourceId,
-          details: details ?? undefined,
+          details: details as object | undefined,
         },
       })
     } catch (error) {
