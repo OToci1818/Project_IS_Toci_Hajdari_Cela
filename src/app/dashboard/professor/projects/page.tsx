@@ -124,7 +124,7 @@ export default function ProfessorProjectsPage() {
       case 'approved':
         return <Badge variant="success">Approved</Badge>
       case 'needs_revision':
-        return <Badge variant="error">Needs Revision</Badge>
+        return <Badge variant="danger">Needs Revision</Badge>
       case 'draft':
         return <Badge variant="default">Draft</Badge>
       default:
@@ -369,7 +369,6 @@ export default function ProfessorProjectsPage() {
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Project</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Course</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Team</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Progress</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Deadline</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Submission</th>
@@ -390,7 +389,7 @@ export default function ProfessorProjectsPage() {
                     </td>
                     <td className="py-3 px-4">
                       {project.course && (
-                        <Badge variant="outline">{project.course.code}</Badge>
+                        <Badge variant="default">{project.course.code}</Badge>
                       )}
                     </td>
                     <td className="py-3 px-4">
@@ -418,17 +417,6 @@ export default function ProfessorProjectsPage() {
                           )}
                         </div>
                         <span className="text-sm text-muted-foreground">{project.memberCount} members</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${project.progress === 100 ? 'bg-success' : 'bg-primary'}`}
-                            style={{ width: `${project.progress}%` }}
-                          />
-                        </div>
-                        <span className="text-sm text-muted-foreground">{project.progress}%</span>
                       </div>
                     </td>
                     <td className="py-3 px-4">
@@ -462,7 +450,7 @@ export default function ProfessorProjectsPage() {
                           </Button>
                         )}
                         <Button
-                          variant="outline"
+                          variant="secondary"
                           size="sm"
                           onClick={() => openGradeModal(project)}
                         >
@@ -472,7 +460,7 @@ export default function ProfessorProjectsPage() {
                           {project.hasGrade ? 'Edit Grade' : 'Grade'}
                         </Button>
                         <Link href={`/dashboard/projects/${project.id}`}>
-                          <Button variant="outline" size="sm">
+                          <Button variant="secondary" size="sm">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -525,7 +513,6 @@ export default function ProfessorProjectsPage() {
             <div className="space-y-1 text-sm text-muted-foreground">
               <p>Course: {reviewProject?.course?.code} - {reviewProject?.course?.title}</p>
               <p>Team Leader: {reviewProject?.teamLeader.fullName}</p>
-              <p>Progress: {reviewProject?.progress}%</p>
             </div>
           </div>
 
@@ -545,7 +532,7 @@ export default function ProfessorProjectsPage() {
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4">
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={() => setShowReviewModal(false)}
             >
               Cancel
@@ -657,7 +644,6 @@ export default function ProfessorProjectsPage() {
             <div className="space-y-1 text-sm text-muted-foreground">
               <p>Course: {selectedProject?.course?.code} - {selectedProject?.course?.title}</p>
               <p>Team Leader: {selectedProject?.teamLeader.fullName}</p>
-              <p>Progress: {selectedProject?.progress}%</p>
               <p>Status: {selectedProject?.status}</p>
             </div>
           </div>
@@ -665,7 +651,7 @@ export default function ProfessorProjectsPage() {
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4">
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={() => setShowGradeModal(false)}
             >
               Cancel
