@@ -62,6 +62,23 @@ enum NotificationType {
   // Team-related
   member_joined
   member_left
+  // Professor-related
+  announcement_posted
+  project_graded
+  submission_status_changed
+  review_posted
+}
+
+enum GradeType {
+  numeric
+  letter
+}
+
+enum SubmissionStatus {
+  draft
+  submitted
+  approved
+  needs_revision
 }
 
 model User {
@@ -90,6 +107,18 @@ model User {
   notificationsReceived  Notification[]  @relation("NotificationRecipient")
   notificationsTriggered Notification[]  @relation("NotificationActor")
 
+  // Course relations
+  coursesTaught          Course[]             @relation("CourseProfessor")
+  courseEnrollments      CourseEnrollment[]   @relation("StudentEnrollments")
+
+  // Professor feature relations
+  gradesGiven            ProjectGrade[]       @relation("GradedBy")
+  submissionsCreated     FinalSubmission[]    @relation("SubmittedBy")
+  submissionsReviewed    FinalSubmission[]    @relation("ReviewedBy")
+  projectReviews         ProjectReview[]      @relation("ReviewAuthor")
+  announcements          Announcement[]       @relation("AnnouncementAuthor")
+  submissionFiles        FinalSubmissionFile[] @relation("SubmissionUploader")
+
   @@map("users")
 }
 
@@ -112,6 +141,7 @@ model Project {
   title        String
   description  String?
   courseCode   String?       @map("course_code")
+  courseId     String?       @map("course_id")
   projectType  ProjectType   @default(group) @map("project_type")
   teamLeaderId String        @map("team_leader_id")
   status       ProjectStatus @default(active)
@@ -120,10 +150,14 @@ model Project {
   updatedAt    DateTime      @updatedAt @map("updated_at")
   deletedAt    DateTime?     @map("deleted_at")
 
-  teamLeader    User           @relation("TeamLeader", fields: [teamLeaderId], references: [id])
-  members       ProjectUser[]
-  tasks         Task[]
-  notifications Notification[]
+  teamLeader      User             @relation("TeamLeader", fields: [teamLeaderId], references: [id])
+  course          Course?          @relation(fields: [courseId], references: [id])
+  members         ProjectUser[]
+  tasks           Task[]
+  notifications   Notification[]
+  grade           ProjectGrade?
+  finalSubmission FinalSubmission?
+  reviews         ProjectReview[]
 
   @@map("projects")
 }
@@ -260,4 +294,125 @@ model Notification {
   @@index([userId, isRead])
   @@index([userId, createdAt])
   @@map("notifications")
+}
+
+// ============================================
+// PROFESSOR FEATURES
+// ============================================
+
+model Course {
+  id          String   @id @default(uuid())
+  title       String
+  code        String   @unique
+  description String?
+  semester    String   // Fall, Spring, Summer
+  year        Int
+  professorId String   @map("professor_id")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  professor     User               @relation("CourseProfessor", fields: [professorId], references: [id])
+  enrollments   CourseEnrollment[]
+  projects      Project[]
+  announcements Announcement[]
+
+  @@map("courses")
+}
+
+model CourseEnrollment {
+  id         String   @id @default(uuid())
+  courseId   String   @map("course_id")
+  studentId  String   @map("student_id")
+  enrolledAt DateTime @default(now()) @map("enrolled_at")
+
+  course  Course @relation(fields: [courseId], references: [id])
+  student User   @relation("StudentEnrollments", fields: [studentId], references: [id])
+
+  @@unique([courseId, studentId])
+  @@map("course_enrollments")
+}
+
+model ProjectGrade {
+  id           String    @id @default(uuid())
+  projectId    String    @unique @map("project_id")
+  professorId  String    @map("professor_id")
+  gradeType    GradeType @map("grade_type")
+  numericGrade Int?      @map("numeric_grade")
+  letterGrade  String?   @map("letter_grade")
+  feedback     String?
+  gradedAt     DateTime  @default(now()) @map("graded_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  project   Project @relation(fields: [projectId], references: [id])
+  professor User    @relation("GradedBy", fields: [professorId], references: [id])
+
+  @@map("project_grades")
+}
+
+model FinalSubmission {
+  id            String           @id @default(uuid())
+  projectId     String           @unique @map("project_id")
+  description   String
+  status        SubmissionStatus @default(draft)
+  submittedAt   DateTime?        @map("submitted_at")
+  submittedById String?          @map("submitted_by_id")
+  reviewedAt    DateTime?        @map("reviewed_at")
+  reviewedById  String?          @map("reviewed_by_id")
+  reviewComment String?          @map("review_comment")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  project     Project               @relation(fields: [projectId], references: [id])
+  submittedBy User?                 @relation("SubmittedBy", fields: [submittedById], references: [id])
+  reviewedBy  User?                 @relation("ReviewedBy", fields: [reviewedById], references: [id])
+  files       FinalSubmissionFile[]
+
+  @@map("final_submissions")
+}
+
+model FinalSubmissionFile {
+  id           String   @id @default(uuid())
+  submissionId String   @map("submission_id")
+  filename     String
+  filepath     String
+  sizeBytes    BigInt   @map("size_bytes")
+  mimeType     String?  @map("mime_type")
+  uploadedBy   String   @map("uploaded_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  submission FinalSubmission @relation(fields: [submissionId], references: [id])
+  uploader   User            @relation("SubmissionUploader", fields: [uploadedBy], references: [id])
+
+  @@map("final_submission_files")
+}
+
+model ProjectReview {
+  id          String   @id @default(uuid())
+  projectId   String   @map("project_id")
+  professorId String   @map("professor_id")
+  content     String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  project   Project @relation(fields: [projectId], references: [id])
+  professor User    @relation("ReviewAuthor", fields: [professorId], references: [id])
+
+  @@map("project_reviews")
+}
+
+model Announcement {
+  id          String   @id @default(uuid())
+  courseId    String   @map("course_id")
+  professorId String   @map("professor_id")
+  title       String
+  content     String
+  isPinned    Boolean  @default(false) @map("is_pinned")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  course    Course @relation(fields: [courseId], references: [id])
+  professor User   @relation("AnnouncementAuthor", fields: [professorId], references: [id])
+
+  @@map("announcements")
 }

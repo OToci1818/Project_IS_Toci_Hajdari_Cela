@@ -43,6 +43,27 @@ async function seed() {
       });
       const existingProjectIds = existingProjects.map((p) => p.id);
 
+      // Delete notifications
+      await prisma.notification.deleteMany({
+        where: {
+          OR: [
+            { projectId: { in: existingProjectIds } },
+            { userId: { in: existingUserIds } },
+            { actorId: { in: existingUserIds } },
+          ],
+        },
+      });
+
+      // Delete comments
+      await prisma.comment.deleteMany({
+        where: {
+          OR: [
+            { task: { projectId: { in: existingProjectIds } } },
+            { authorId: { in: existingUserIds } },
+          ],
+        },
+      });
+
       // Delete files
       await prisma.file.deleteMany({
         where: {
