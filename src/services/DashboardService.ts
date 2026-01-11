@@ -15,6 +15,11 @@ export interface RecentProject {
   status: string
   progress: number
   deadlineDate?: Date
+  grade?: {
+    gradeType: 'numeric' | 'letter'
+    numericGrade?: number
+    letterGrade?: string
+  }
 }
 
 export interface DashboardData {
@@ -170,6 +175,7 @@ class DashboardService {
           where: { isDeleted: false },
           select: { status: true },
         },
+        grade: true,
       },
       orderBy: { updatedAt: 'desc' },
       take: limit,
@@ -187,6 +193,11 @@ class DashboardService {
         status: project.status,
         progress,
         deadlineDate: project.deadlineDate ?? undefined,
+        grade: project.grade ? {
+          gradeType: project.grade.gradeType as 'numeric' | 'letter',
+          numericGrade: project.grade.numericGrade ?? undefined,
+          letterGrade: project.grade.letterGrade ?? undefined,
+        } : undefined,
       }
     })
   }
