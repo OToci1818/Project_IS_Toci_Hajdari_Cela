@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { authService, taskService } from "@/services";
+import { authService, taskService, projectService } from "@/services";
 import { TaskPriority } from "@/types";
 import jwt from "jsonwebtoken";
 
@@ -67,12 +67,35 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!assigneeId) {
+      return NextResponse.json(
+        { error: "Assignee is required" },
+        { status: 400 }
+      );
+    }
+
+    // Check if user is the team leader of the project
+    const project = await projectService.getProjectById(projectId);
+    if (!project) {
+      return NextResponse.json(
+        { error: "Project not found" },
+        { status: 404 }
+      );
+    }
+
+    if (project.teamLeaderId !== user.id) {
+      return NextResponse.json(
+        { error: "Only the team leader can create tasks" },
+        { status: 403 }
+      );
+    }
+
     const task = await taskService.createTask({
       projectId,
       title,
       description,
       priority: priority as TaskPriority,
-      assigneeId: assigneeId || user.id,
+      assigneeId,
       dueDate: dueDate ? new Date(dueDate) : undefined,
       createdById: user.id,
     });

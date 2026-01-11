@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { title, description, courseCode, projectType, deadlineDate } = body;
+    const { title, description, courseCode, courseId, projectType, deadlineDate } = body;
 
     if (!title) {
       return NextResponse.json(
@@ -68,6 +68,7 @@ export async function POST(request: Request) {
       title,
       description,
       courseCode,
+      courseId,
       projectType: projectType as ProjectType,
       deadlineDate: deadlineDate ? new Date(deadlineDate) : undefined,
       createdById: user.id,
