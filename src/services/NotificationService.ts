@@ -530,7 +530,7 @@ class NotificationService {
   ): Promise<void> {
     const statusText = status === 'approved' ? 'approved' : 'requires revision'
     await this.createBulkNotifications(memberIds, {
-      type: 'submission_reviewed',
+      type: 'submission_status_changed',
       title: status === 'approved' ? 'Submission Approved' : 'Revision Requested',
       message: `Professor ${professor.fullName} ${statusText} your submission for "${project.title}"${comment ? `: "${comment}"` : ''}`,
       projectId: project.id,
@@ -550,7 +550,7 @@ class NotificationService {
   ): Promise<void> {
     await this.createNotification({
       userId: professorId,
-      type: 'submission_received',
+      type: 'submission_status_changed',
       title: 'New Submission',
       message: `${submitter.fullName} submitted "${project.title}" from ${course.title} for review`,
       projectId: project.id,
@@ -830,6 +830,146 @@ class NotificationService {
           })
           notificationCount++
         }
+      }
+    }
+
+    return notificationCount
+  }
+
+  // =====================
+  // NEW NOTIFICATION METHODS
+  // =====================
+
+  /**
+   * Notify team leader when project is 100% complete and ready for submission
+   */
+  async notifyProjectReadyForSubmission(
+    teamLeaderId: string,
+    project: { id: string; title: string }
+  ): Promise<void> {
+    await this.createNotification({
+      userId: teamLeaderId,
+      type: 'project_ready_for_submission',
+      title: 'Project Ready for Submission',
+      message: `All tasks in "${project.title}" are complete. The project is ready for final submission.`,
+      metadata: { projectId: project.id },
+    })
+  }
+
+  /**
+   * Notify professor when a student creates a project in their course
+   */
+  async notifyProjectCreated(
+    professorId: string,
+    creator: { id: string; fullName: string },
+    project: { id: string; title: string },
+    course: { id: string; title: string; code: string }
+  ): Promise<void> {
+    await this.createNotification({
+      userId: professorId,
+      type: 'project_created',
+      title: 'New Project Created',
+      message: `${creator.fullName} created a new project "${project.title}" in ${course.code}`,
+      actorId: creator.id,
+      metadata: { projectId: project.id, courseId: course.id },
+    })
+  }
+
+  /**
+   * Notify all project members when project status changes
+   */
+  async notifyProjectStatusChanged(
+    memberIds: string[],
+    changedBy: { id: string; fullName: string },
+    project: { id: string; title: string },
+    newStatus: string
+  ): Promise<void> {
+    const statusLabel = newStatus.charAt(0).toUpperCase() + newStatus.slice(1)
+    await this.createBulkNotifications(memberIds, {
+      type: 'project_status_changed',
+      title: `Project ${statusLabel}`,
+      message: `${changedBy.fullName} changed "${project.title}" status to ${newStatus}`,
+      actorId: changedBy.id,
+      metadata: { projectId: project.id, newStatus },
+    })
+  }
+
+  /**
+   * Notify professor when project deadline is missed
+   */
+  async notifyDeadlineMissed(
+    professorId: string,
+    project: { id: string; title: string },
+    course: { id: string; code: string },
+    teamLeader: { fullName: string }
+  ): Promise<void> {
+    await this.createNotification({
+      userId: professorId,
+      type: 'deadline_missed',
+      title: 'Project Deadline Missed',
+      message: `"${project.title}" by ${teamLeader.fullName} in ${course.code} has passed its deadline without submission`,
+      metadata: { projectId: project.id, courseId: course.id },
+    })
+  }
+
+  /**
+   * Check for projects that missed their deadline and notify professors
+   */
+  async checkProjectDeadlinesMissed(): Promise<number> {
+    const now = new Date()
+
+    // Find projects past deadline without approved submission
+    const overdueProjects = await prisma.project.findMany({
+      where: {
+        deadlineDate: { lt: now },
+        deletedAt: null,
+        status: { not: 'completed' },
+        courseId: { not: null },
+      },
+      include: {
+        course: {
+          select: { id: true, code: true, professorId: true },
+        },
+        teamLeader: {
+          select: { fullName: true },
+        },
+        finalSubmission: {
+          select: { status: true },
+        },
+      },
+    })
+
+    let notificationCount = 0
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    for (const project of overdueProjects) {
+      if (!project.course || !project.course.professorId) continue
+
+      // Skip if submission is approved
+      if (project.finalSubmission?.status === 'approved') continue
+
+      // Check if we already notified about this project today
+      const existingNotification = await prisma.notification.findFirst({
+        where: {
+          userId: project.course.professorId,
+          type: 'deadline_missed',
+          createdAt: { gte: today },
+          metadata: {
+            path: ['projectId'],
+            equals: project.id,
+          },
+        },
+      })
+
+      if (!existingNotification) {
+        await this.notifyDeadlineMissed(
+          project.course.professorId,
+          { id: project.id, title: project.title },
+          { id: project.course.id, code: project.course.code },
+          { fullName: project.teamLeader.fullName }
+        )
+        notificationCount++
       }
     }
 
