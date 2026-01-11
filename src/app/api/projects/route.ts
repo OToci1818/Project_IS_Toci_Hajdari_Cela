@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { authService } from "@/services";
+import { authService, notificationService } from "@/services";
 import { projectService, ProjectStatus, ProjectType } from "@/services/ProjectService";
+import { prisma } from "@/lib/prisma";
 import jwt from "jsonwebtoken";
 
 async function getCurrentUser() {
@@ -73,6 +74,23 @@ export async function POST(request: Request) {
       deadlineDate: deadlineDate ? new Date(deadlineDate) : undefined,
       createdById: user.id,
     });
+
+    // Notify professor if project is linked to a course
+    if (courseId) {
+      const course = await prisma.course.findUnique({
+        where: { id: courseId },
+        select: { id: true, title: true, code: true, professorId: true },
+      });
+
+      if (course && course.professorId) {
+        await notificationService.notifyProjectCreated(
+          course.professorId,
+          { id: user.id, fullName: user.fullName },
+          { id: project.id, title: project.title },
+          { id: course.id, title: course.title, code: course.code }
+        );
+      }
+    }
 
     return NextResponse.json({ project }, { status: 201 });
   } catch (error) {
