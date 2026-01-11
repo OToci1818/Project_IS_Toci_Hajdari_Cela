@@ -13,10 +13,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const [tasksDue, tasksOverdue, projectDeadlines] = await Promise.all([
+    const [tasksDue, tasksOverdue, projectDeadlines, projectDeadlinesMissed] = await Promise.all([
       notificationService.checkTasksDueApproaching(),
       notificationService.checkTasksOverdue(),
       notificationService.checkProjectDeadlinesApproaching(),
+      notificationService.checkProjectDeadlinesMissed(),
     ]);
 
     return NextResponse.json({
@@ -25,6 +26,7 @@ export async function POST(request: Request) {
         tasksDueApproaching: tasksDue,
         tasksOverdue: tasksOverdue,
         projectDeadlinesApproaching: projectDeadlines,
+        projectDeadlinesMissed: projectDeadlinesMissed,
       },
     });
   } catch (error) {
