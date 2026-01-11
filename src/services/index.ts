@@ -62,3 +62,12 @@ export type {
   FileWithUploader,
   CreateFileInput,
 } from './FileService'
+
+// Course service
+export { courseService, CourseService } from './CourseService'
+export type {
+  CreateCourseInput,
+  UpdateCourseInput,
+  CourseWithDetails,
+  EnrolledStudent,
+} from './CourseService'

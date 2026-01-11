@@ -9,6 +9,7 @@ export interface CreateProjectInput {
   title: string
   description?: string
   courseCode?: string
+  courseId?: string
   projectType?: ProjectType
   deadlineDate?: Date
   createdById: string
@@ -18,6 +19,7 @@ export interface UpdateProjectInput {
   title?: string
   description?: string
   courseCode?: string
+  courseId?: string
   projectType?: ProjectType
   status?: ProjectStatus
   deadlineDate?: Date | null
@@ -28,6 +30,12 @@ export interface ProjectListItem {
   title: string
   description?: string
   courseCode?: string
+  courseId?: string
+  course?: {
+    id: string
+    title: string
+    code: string
+  }
   projectType: ProjectType
   status: ProjectStatus
   deadlineDate?: Date
@@ -51,6 +59,12 @@ export interface ProjectWithMembers {
   title: string
   description?: string
   courseCode?: string
+  courseId?: string
+  course?: {
+    id: string
+    title: string
+    code: string
+  }
   projectType: ProjectType
   status: ProjectStatus
   deadlineDate?: Date
@@ -80,7 +94,7 @@ class ProjectService {
    * Create a new project. The creator becomes the team leader and is auto-added as a member.
    */
   async createProject(input: CreateProjectInput): Promise<ProjectWithMembers> {
-    const { title, description, courseCode, projectType, deadlineDate, createdById } = input
+    const { title, description, courseCode, courseId, projectType, deadlineDate, createdById } = input
 
     // Create project and add creator as team leader member in a transaction
     const project = await prisma.$transaction(async (tx) => {
@@ -89,6 +103,7 @@ class ProjectService {
           title,
           description,
           courseCode,
+          courseId,
           projectType: (projectType as PrismaProjectType) ?? 'group',
           deadlineDate,
           teamLeaderId: createdById,
@@ -144,6 +159,9 @@ class ProjectService {
           where: { isDeleted: false },
           select: { status: true },
         },
+        course: {
+          select: { id: true, title: true, code: true },
+        },
       },
       orderBy: { updatedAt: 'desc' },
     })
@@ -158,6 +176,8 @@ class ProjectService {
         title: project.title,
         description: project.description ?? undefined,
         courseCode: project.courseCode ?? undefined,
+        courseId: project.courseId ?? undefined,
+        course: project.course ?? undefined,
         projectType: project.projectType as ProjectType,
         status: project.status as ProjectStatus,
         deadlineDate: project.deadlineDate ?? undefined,
@@ -192,6 +212,9 @@ class ProjectService {
           where: { isDeleted: false },
           select: { status: true },
         },
+        course: {
+          select: { id: true, title: true, code: true },
+        },
       },
     })
 
@@ -206,6 +229,8 @@ class ProjectService {
       title: project.title,
       description: project.description ?? undefined,
       courseCode: project.courseCode ?? undefined,
+      courseId: project.courseId ?? undefined,
+      course: project.course ?? undefined,
       projectType: project.projectType as ProjectType,
       status: project.status as ProjectStatus,
       deadlineDate: project.deadlineDate ?? undefined,
@@ -263,6 +288,7 @@ class ProjectService {
         title: input.title,
         description: input.description,
         courseCode: input.courseCode,
+        courseId: input.courseId,
         projectType: input.projectType as PrismaProjectType | undefined,
         status: input.status as PrismaProjectStatus | undefined,
         deadlineDate: input.deadlineDate,

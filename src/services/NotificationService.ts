@@ -365,6 +365,25 @@ class NotificationService {
   }
 
   /**
+   * Notify when task is due today
+   */
+  async notifyTaskDueToday(
+    assigneeId: string,
+    task: { id: string; title: string; dueDate: Date },
+    project: { id: string; title: string }
+  ): Promise<void> {
+    await this.createNotification({
+      userId: assigneeId,
+      type: 'task_due_approaching',
+      title: 'Task Due Today',
+      message: `The task "${task.title}" in "${project.title}" is due today!`,
+      projectId: project.id,
+      taskId: task.id,
+      metadata: { dueDate: task.dueDate.toISOString(), dueToday: true },
+    })
+  }
+
+  /**
    * Notify when task is overdue
    */
   async notifyTaskOverdue(
@@ -480,18 +499,173 @@ class NotificationService {
     })
   }
 
+  /**
+   * Notify when project is graded
+   */
+  async notifyProjectGraded(
+    memberIds: string[],
+    professor: { id: string; fullName: string },
+    project: { id: string; title: string },
+    grade: string
+  ): Promise<void> {
+    await this.createBulkNotifications(memberIds, {
+      type: 'project_graded',
+      title: 'Project Graded',
+      message: `Professor ${professor.fullName} graded your project "${project.title}": ${grade}`,
+      projectId: project.id,
+      actorId: professor.id,
+      metadata: { grade },
+    })
+  }
+
+  /**
+   * Notify when submission is reviewed
+   */
+  async notifySubmissionReviewed(
+    memberIds: string[],
+    professor: { id: string; fullName: string },
+    project: { id: string; title: string },
+    status: 'approved' | 'needs_revision',
+    comment?: string
+  ): Promise<void> {
+    const statusText = status === 'approved' ? 'approved' : 'requires revision'
+    await this.createBulkNotifications(memberIds, {
+      type: 'submission_reviewed',
+      title: status === 'approved' ? 'Submission Approved' : 'Revision Requested',
+      message: `Professor ${professor.fullName} ${statusText} your submission for "${project.title}"${comment ? `: "${comment}"` : ''}`,
+      projectId: project.id,
+      actorId: professor.id,
+      metadata: { status, comment },
+    })
+  }
+
+  /**
+   * Notify professor when submission is submitted
+   */
+  async notifySubmissionReceived(
+    professorId: string,
+    submitter: { id: string; fullName: string },
+    project: { id: string; title: string },
+    course: { id: string; title: string }
+  ): Promise<void> {
+    await this.createNotification({
+      userId: professorId,
+      type: 'submission_received',
+      title: 'New Submission',
+      message: `${submitter.fullName} submitted "${project.title}" from ${course.title} for review`,
+      projectId: project.id,
+      actorId: submitter.id,
+    })
+  }
+
+  /**
+   * Notify when professor posts a review
+   */
+  async notifyReviewPosted(
+    memberIds: string[],
+    professor: { id: string; fullName: string },
+    project: { id: string; title: string }
+  ): Promise<void> {
+    await this.createBulkNotifications(memberIds, {
+      type: 'review_posted',
+      title: 'New Review',
+      message: `Professor ${professor.fullName} posted a review on "${project.title}"`,
+      projectId: project.id,
+      actorId: professor.id,
+    })
+  }
+
+  /**
+   * Notify when professor posts an announcement
+   */
+  async notifyAnnouncementPosted(
+    studentIds: string[],
+    professor: { id: string; fullName: string },
+    course: { id: string; title: string },
+    announcementTitle: string
+  ): Promise<void> {
+    await this.createBulkNotifications(studentIds, {
+      type: 'announcement_posted',
+      title: 'New Announcement',
+      message: `Professor ${professor.fullName} posted an announcement in ${course.title}: "${announcementTitle}"`,
+      actorId: professor.id,
+    })
+  }
+
   // ==========================================
   // SCHEDULED NOTIFICATION HELPERS
   // ==========================================
+
+  /**
+   * Find tasks due today and create notifications
+   * (To be called by cron job or on-login check)
+   */
+  async checkTasksDueToday(): Promise<number> {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    const tasksDueToday = await prisma.task.findMany({
+      where: {
+        dueDate: {
+          gte: today,
+          lt: tomorrow,
+        },
+        status: { not: 'done' },
+        isDeleted: false,
+        assigneeId: { not: null },
+      },
+      include: {
+        project: { select: { id: true, title: true } },
+      },
+    })
+
+    let notificationCount = 0
+
+    // Check for existing notifications to avoid duplicates
+    for (const task of tasksDueToday) {
+      if (!task.assigneeId || !task.dueDate) continue
+
+      // Check for existing "due today" notification (with dueToday flag)
+      const existingNotifications = await prisma.notification.findMany({
+        where: {
+          userId: task.assigneeId,
+          taskId: task.id,
+          type: 'task_due_approaching',
+          createdAt: { gte: today },
+        },
+      })
+
+      // Find notification that has dueToday=true
+      const existingNotification = existingNotifications.find(
+        (n) => (n.metadata as Record<string, unknown>)?.dueToday === true
+      )
+
+      if (!existingNotification) {
+        await this.notifyTaskDueToday(
+          task.assigneeId,
+          { id: task.id, title: task.title, dueDate: task.dueDate },
+          { id: task.project.id, title: task.project.title }
+        )
+        notificationCount++
+      }
+    }
+
+    return notificationCount
+  }
 
   /**
    * Find tasks due tomorrow and create notifications
    * (To be called by cron job or on-login check)
    */
   async checkTasksDueApproaching(): Promise<number> {
-    const tomorrow = new Date()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
-    tomorrow.setHours(0, 0, 0, 0)
 
     const dayAfterTomorrow = new Date(tomorrow)
     dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1)
@@ -517,14 +691,20 @@ class NotificationService {
     for (const task of tasksDueTomorrow) {
       if (!task.assigneeId || !task.dueDate) continue
 
-      const existingNotification = await prisma.notification.findFirst({
+      // Check for existing "due tomorrow" notification created today
+      const existingNotifications = await prisma.notification.findMany({
         where: {
           userId: task.assigneeId,
           taskId: task.id,
           type: 'task_due_approaching',
-          createdAt: { gte: tomorrow },
+          createdAt: { gte: today },
         },
       })
+
+      // Filter out notifications that have dueToday=true (those are for today, not tomorrow)
+      const existingNotification = existingNotifications.find(
+        (n) => !(n.metadata as Record<string, unknown>)?.dueToday
+      )
 
       if (!existingNotification) {
         await this.notifyTaskDueApproaching(
