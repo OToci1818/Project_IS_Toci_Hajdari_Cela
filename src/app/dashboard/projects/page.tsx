@@ -9,12 +9,24 @@ interface Project {
   title: string
   description?: string
   courseCode?: string
+  courseId?: string
+  course?: {
+    id: string
+    title: string
+    code: string
+  }
   projectType: 'individual' | 'group'
   status: 'active' | 'completed' | 'archived'
   progress: number
   deadlineDate?: string
   memberCount: number
   taskStats: { total: number; done: number }
+}
+
+interface Course {
+  id: string
+  title: string
+  code: string
 }
 
 const statusOptions = ['all', 'active', 'completed', 'archived']
@@ -32,10 +44,11 @@ export default function ProjectsPage() {
   const [search, setSearch] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [courses, setCourses] = useState<Course[]>([])
   const [newProject, setNewProject] = useState({
     title: '',
     description: '',
-    courseCode: '',
+    courseId: '',
     deadlineDate: '',
     projectType: 'group',
   })
@@ -61,6 +74,11 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     fetchProjects()
+    // Fetch courses for the dropdown
+    fetch('/api/courses')
+      .then((res) => res.json())
+      .then((data) => setCourses(data.courses || []))
+      .catch(console.error)
   }, [fetchProjects])
 
   const handleCreateProject = async () => {
@@ -74,7 +92,7 @@ export default function ProjectsPage() {
         body: JSON.stringify({
           title: newProject.title,
           description: newProject.description || undefined,
-          courseCode: newProject.courseCode || undefined,
+          courseId: newProject.courseId || undefined,
           projectType: newProject.projectType,
           deadlineDate: newProject.deadlineDate || undefined,
         }),
@@ -85,7 +103,7 @@ export default function ProjectsPage() {
         setNewProject({
           title: '',
           description: '',
-          courseCode: '',
+          courseId: '',
           deadlineDate: '',
           projectType: 'group',
         })
@@ -228,7 +246,7 @@ export default function ProjectsPage() {
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                     </svg>
-                    {project.courseCode || 'No course'}
+                    {project.course ? `${project.course.code} - ${project.course.title}` : (project.courseCode || 'No course')}
                   </div>
                 </div>
                 <Badge variant={project.projectType === 'group' ? 'info' : 'outline'}>
@@ -340,12 +358,26 @@ export default function ProjectsPage() {
               className="px-4 py-2.5 rounded-[0.625rem] border border-input bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[100px] resize-none text-card-foreground placeholder:text-muted-foreground"
             />
           </div>
-          <Input
-            label="Course Code"
-            placeholder="e.g., CS301"
-            value={newProject.courseCode}
-            onChange={(value) => setNewProject({ ...newProject, courseCode: value })}
-          />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-card-foreground">Course</label>
+            <select
+              value={newProject.courseId}
+              onChange={(e) => setNewProject({ ...newProject, courseId: e.target.value })}
+              className="px-4 py-2.5 rounded-[0.625rem] border border-input bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-card-foreground"
+            >
+              <option value="">Select a course (optional)</option>
+              {courses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.code} - {course.title}
+                </option>
+              ))}
+            </select>
+            {courses.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                No courses available. Enroll in a course first.
+              </p>
+            )}
+          </div>
           <Input
             label="Deadline"
             type="date"

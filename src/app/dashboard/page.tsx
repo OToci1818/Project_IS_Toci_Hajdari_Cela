@@ -6,14 +6,16 @@ import { Card, Badge } from '@/components'
 
 interface User {
   fullName: string
+  role: string
 }
 
+// Student dashboard interfaces
 interface DashboardStats {
   totalProjects: number
   completedProjects: number
   activeTasks: number
   completedTasks: number
-  teamMembersCount: number
+  totalTasks: number
 }
 
 interface RecentProject {
@@ -25,16 +27,55 @@ interface RecentProject {
   deadlineDate?: string
 }
 
+// Professor dashboard interfaces
+interface ProfessorDashboardStats {
+  totalCourses: number
+  activeCourses: number
+  totalStudents: number
+  totalProjects: number
+  pendingSubmissions: number
+  gradedProjects: number
+}
+
+interface ProfessorCourse {
+  id: string
+  title: string
+  code: string
+  semester: string
+  year: number
+  studentCount: number
+  projectCount: number
+  pendingSubmissions: number
+}
+
+interface RecentActivity {
+  id: string
+  type: 'graded' | 'reviewed' | 'submission_received'
+  projectTitle: string
+  projectId: string
+  studentName: string
+  courseName: string
+  timestamp: string
+  details?: string
+}
+
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
+  const [userRole, setUserRole] = useState<string>('')
+  const [loading, setLoading] = useState(true)
+
+  // Student data
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([])
-  const [loading, setLoading] = useState(true)
+
+  // Professor data
+  const [professorStats, setProfessorStats] = useState<ProfessorDashboardStats | null>(null)
+  const [courses, setCourses] = useState<ProfessorCourse[]>([])
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch user and dashboard data in parallel
         const [userResponse, dashboardResponse] = await Promise.all([
           fetch('/api/auth/me'),
           fetch('/api/dashboard/stats'),
@@ -47,8 +88,16 @@ export default function DashboardPage() {
 
         if (dashboardResponse.ok) {
           const dashboardData = await dashboardResponse.json()
-          setStats(dashboardData.stats)
-          setRecentProjects(dashboardData.recentProjects)
+          setUserRole(dashboardData.userRole)
+
+          if (dashboardData.userRole === 'professor') {
+            setProfessorStats(dashboardData.stats)
+            setCourses(dashboardData.courses || [])
+            setRecentActivity(dashboardData.recentActivity || [])
+          } else {
+            setStats(dashboardData.stats)
+            setRecentProjects(dashboardData.recentProjects)
+          }
         }
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error)
@@ -73,6 +122,308 @@ export default function DashboardPage() {
     })
   }
 
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+    if (diffHours < 1) return 'Just now'
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
+    return formatDate(timestamp)
+  }
+
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'graded':
+        return (
+          <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center">
+            <svg className="w-4 h-4 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+        )
+      case 'reviewed':
+        return (
+          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+            <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+          </div>
+        )
+      case 'submission_received':
+        return (
+          <div className="w-8 h-8 rounded-full bg-warning/20 flex items-center justify-center">
+            <svg className="w-4 h-4 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+        )
+      default:
+        return null
+    }
+  }
+
+  // Professor dashboard
+  if (userRole === 'professor') {
+    const professorStatsConfig = [
+      {
+        label: 'Total Courses',
+        value: professorStats?.totalCourses ?? 0,
+        icon: (
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          </svg>
+        ),
+        color: 'primary'
+      },
+      {
+        label: 'Total Students',
+        value: professorStats?.totalStudents ?? 0,
+        icon: (
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        ),
+        color: 'info'
+      },
+      {
+        label: 'Pending Submissions',
+        value: professorStats?.pendingSubmissions ?? 0,
+        icon: (
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        ),
+        color: 'warning'
+      },
+      {
+        label: 'Graded Projects',
+        value: professorStats?.gradedProjects ?? 0,
+        icon: (
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        ),
+        color: 'success'
+      },
+    ]
+
+    return (
+      <div>
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight text-card-foreground">
+            Mire se vjen, Prof. {user ? getFirstName(user.fullName) : '...'}!
+          </h1>
+          <p className="text-muted-foreground mt-1">Manage your courses and review student projects.</p>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {professorStatsConfig.map((stat) => (
+            <Card key={stat.label}>
+              <div className="flex items-center gap-4">
+                <div className={`stats-icon stats-icon-${stat.color}`}>
+                  {stat.icon}
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-card-foreground">
+                    {loading ? '...' : stat.value}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* My Courses */}
+          <Card>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-card-foreground">My Courses</h2>
+              <Link
+                href="/dashboard/courses"
+                className="text-primary text-sm font-medium hover:underline flex items-center gap-1"
+              >
+                View all
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            </div>
+
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : courses.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">No courses yet</p>
+                <Link
+                  href="/dashboard/courses"
+                  className="text-primary font-medium hover:underline"
+                >
+                  Create your first course
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {courses.slice(0, 4).map((course) => (
+                  <Link
+                    key={course.id}
+                    href={`/dashboard/courses/${course.id}`}
+                    className="flex items-center justify-between p-4 rounded-[0.625rem] border border-border hover:border-primary/30 hover:bg-muted/50 transition-all cursor-pointer group block"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-medium text-card-foreground group-hover:text-primary transition-colors truncate">
+                          {course.title}
+                        </h3>
+                        <Badge variant="default">{course.code}</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {course.semester} {course.year}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        {course.studentCount}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                        </svg>
+                        {course.projectCount}
+                      </span>
+                      {course.pendingSubmissions > 0 && (
+                        <Badge variant="warning">{course.pendingSubmissions} pending</Badge>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* Recent Activity */}
+          <Card>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-card-foreground">Recent Activity</h2>
+              <Link
+                href="/dashboard/professor/projects"
+                className="text-primary text-sm font-medium hover:underline flex items-center gap-1"
+              >
+                View projects
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            </div>
+
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : recentActivity.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">No recent activity</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recentActivity.slice(0, 5).map((activity) => (
+                  <Link
+                    key={activity.id}
+                    href={`/dashboard/projects/${activity.projectId}`}
+                    className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    {getActivityIcon(activity.type)}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-card-foreground truncate">
+                        {activity.projectTitle}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {activity.studentName} · {activity.courseName}
+                      </p>
+                      {activity.details && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {activity.details}
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {formatTimestamp(activity.timestamp)}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mt-6">
+          <Card>
+            <h2 className="text-xl font-semibold text-card-foreground mb-4">Quick Actions</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Link
+                href="/dashboard/courses"
+                className="flex items-center gap-3 p-4 rounded-lg border border-border hover:border-primary/30 hover:bg-muted/50 transition-all"
+              >
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-medium text-card-foreground">Create Course</p>
+                  <p className="text-sm text-muted-foreground">Add a new course</p>
+                </div>
+              </Link>
+
+              <Link
+                href="/dashboard/professor/projects"
+                className="flex items-center gap-3 p-4 rounded-lg border border-border hover:border-primary/30 hover:bg-muted/50 transition-all"
+              >
+                <div className="w-10 h-10 rounded-full bg-warning/20 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-medium text-card-foreground">Review Submissions</p>
+                  <p className="text-sm text-muted-foreground">{professorStats?.pendingSubmissions || 0} pending</p>
+                </div>
+              </Link>
+
+              <Link
+                href="/dashboard/professor/projects"
+                className="flex items-center gap-3 p-4 rounded-lg border border-border hover:border-primary/30 hover:bg-muted/50 transition-all"
+              >
+                <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-medium text-card-foreground">Grade Projects</p>
+                  <p className="text-sm text-muted-foreground">View student projects</p>
+                </div>
+              </Link>
+            </div>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  // Student dashboard
   const statsConfig = [
     {
       label: 'Total Projects',
@@ -105,14 +456,14 @@ export default function DashboardPage() {
       color: 'success'
     },
     {
-      label: 'Team Members',
-      value: stats?.teamMembersCount ?? 0,
+      label: 'Total Tasks',
+      value: stats?.totalTasks ?? 0,
       icon: (
         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
         </svg>
       ),
-      color: 'destructive'
+      color: 'info'
     },
   ]
 
@@ -143,17 +494,6 @@ export default function DashboardPage() {
             </div>
           </Card>
         ))}
-      </div>
-
-      {/* Tip Alert */}
-      <div className="alert-warning flex items-start gap-3 mb-6">
-        <svg className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-        </svg>
-        <div>
-          <p className="font-medium text-card-foreground">Tip: Stay organized!</p>
-          <p className="text-sm text-muted-foreground">Use the Tasks page to track your progress and stay on top of deadlines.</p>
-        </div>
       </div>
 
       {/* Recent Projects */}
@@ -188,9 +528,10 @@ export default function DashboardPage() {
         ) : (
           <div className="space-y-4">
             {recentProjects.map((project) => (
-              <div
+              <Link
                 key={project.id}
-                className="flex items-center justify-between p-4 rounded-[0.625rem] border border-border hover:border-primary/30 hover:bg-muted/50 transition-all cursor-pointer group"
+                href={`/dashboard/projects/${project.id}`}
+                className="flex items-center justify-between p-4 rounded-[0.625rem] border border-border hover:border-primary/30 hover:bg-muted/50 transition-all cursor-pointer group block"
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-1">
@@ -235,7 +576,7 @@ export default function DashboardPage() {
                     View Details →
                   </span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

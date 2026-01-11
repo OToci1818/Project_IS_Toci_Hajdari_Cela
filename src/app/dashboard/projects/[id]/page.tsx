@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Card, Badge, Button, Tabs, FileList } from '@/components'
+import { Card, Badge, Button, Tabs, FileList, Modal, Input } from '@/components'
 
 interface Member {
   id: string
@@ -87,6 +87,18 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
   const [currentUserId, setCurrentUserId] = useState('')
+  const [currentUserRole, setCurrentUserRole] = useState('')
+
+  // Create task modal state
+  const [showCreateTaskModal, setShowCreateTaskModal] = useState(false)
+  const [creatingTask, setCreatingTask] = useState(false)
+  const [newTask, setNewTask] = useState({
+    title: '',
+    description: '',
+    priority: 'medium',
+    dueDate: '',
+    assigneeId: '',
+  })
 
   const fetchProject = useCallback(async () => {
     try {
@@ -119,6 +131,7 @@ export default function ProjectDetailPage() {
       if (userRes.ok) {
         const data = await userRes.json()
         setCurrentUserId(data.user.id)
+        setCurrentUserRole(data.user.role)
       }
     } catch (error) {
       console.error('Failed to fetch project:', error)
@@ -138,6 +151,53 @@ export default function ProjectDetailPage() {
 
     if (response.ok) {
       setFiles((prev) => prev.filter((f) => f.s3Key !== fileKey))
+    }
+  }
+
+  const handleCreateTask = async () => {
+    if (!newTask.title.trim()) return
+
+    setCreatingTask(true)
+    try {
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId,
+          title: newTask.title.trim(),
+          description: newTask.description.trim() || undefined,
+          priority: newTask.priority,
+          dueDate: newTask.dueDate || undefined,
+          assigneeId: newTask.assigneeId || undefined,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setTasks((prev) => [...prev, data.task])
+        setShowCreateTaskModal(false)
+        setNewTask({
+          title: '',
+          description: '',
+          priority: 'medium',
+          dueDate: '',
+          assigneeId: '',
+        })
+        // Update project stats
+        if (project) {
+          setProject({
+            ...project,
+            taskStats: {
+              ...project.taskStats,
+              total: project.taskStats.total + 1,
+            },
+          })
+        }
+      }
+    } catch (error) {
+      console.error('Failed to create task:', error)
+    } finally {
+      setCreatingTask(false)
     }
   }
 
@@ -233,18 +293,21 @@ export default function ProjectDetailPage() {
   }
 
   const acceptedMembers = project.members.filter((m) => m.inviteStatus === 'accepted')
+  const isProfessor = currentUserRole === 'professor'
+  // Professors can only view - they cannot create tasks even if they were somehow the team leader
+  const isTeamLeader = currentUserId === project.teamLeaderId && !isProfessor
 
   return (
     <div>
       {/* Back Link */}
       <Link
-        href="/dashboard/projects"
+        href={isProfessor ? "/dashboard/professor/projects" : "/dashboard/projects"}
         className="inline-flex items-center gap-2 text-muted-foreground hover:text-card-foreground mb-6 transition-colors"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
-        Back to Projects
+        {isProfessor ? 'Back to Student Projects' : 'Back to Projects'}
       </Link>
 
       {/* Project Header */}
@@ -257,6 +320,9 @@ export default function ProjectDetailPage() {
               <Badge variant={project.projectType === 'group' ? 'info' : 'outline'}>
                 {project.projectType}
               </Badge>
+              {isProfessor && (
+                <Badge variant="warning">Professor View (Read Only)</Badge>
+              )}
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               {project.courseCode && (
@@ -344,6 +410,18 @@ export default function ProjectDetailPage() {
 
       {activeTab === 'tasks' && (
         <div className="space-y-4">
+          {/* Add Task Button - Only visible to team leader */}
+          {isTeamLeader && (
+            <div className="flex justify-end">
+              <Button onClick={() => setShowCreateTaskModal(true)}>
+                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Task
+              </Button>
+            </div>
+          )}
+
           {tasks.length === 0 ? (
             <Card>
               <div className="text-center py-8">
@@ -353,7 +431,14 @@ export default function ProjectDetailPage() {
                   </svg>
                 </div>
                 <h3 className="text-lg font-semibold text-card-foreground mb-2">No tasks yet</h3>
-                <p className="text-muted-foreground">Create tasks from the My Tasks page.</p>
+                <p className="text-muted-foreground mb-4">
+                  {isTeamLeader ? 'Create your first task to get started.' : 'The team leader will assign tasks soon.'}
+                </p>
+                {isTeamLeader && (
+                  <Button onClick={() => setShowCreateTaskModal(true)}>
+                    Create Task
+                  </Button>
+                )}
               </div>
             </Card>
           ) : (
@@ -433,6 +518,93 @@ export default function ProjectDetailPage() {
           />
         </Card>
       )}
+
+      {/* Create Task Modal */}
+      <Modal
+        isOpen={showCreateTaskModal}
+        onClose={() => setShowCreateTaskModal(false)}
+        title="Create New Task"
+      >
+        <div className="space-y-4">
+          <Input
+            label="Task Title"
+            placeholder="Enter task title"
+            value={newTask.title}
+            onChange={(value) => setNewTask({ ...newTask, title: value })}
+            required
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-card-foreground mb-1.5">
+              Description
+            </label>
+            <textarea
+              className="w-full px-3 py-2 bg-input border border-border rounded-[0.625rem] text-card-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors resize-none"
+              rows={3}
+              placeholder="Enter task description (optional)"
+              value={newTask.description}
+              onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-card-foreground mb-1.5">
+              Priority
+            </label>
+            <select
+              className="w-full px-3 py-2 bg-input border border-border rounded-[0.625rem] text-card-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+              value={newTask.priority}
+              onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+
+          <Input
+            label="Due Date"
+            type="date"
+            value={newTask.dueDate}
+            onChange={(value) => setNewTask({ ...newTask, dueDate: value })}
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-card-foreground mb-1.5">
+              Assign To <span className="text-destructive">*</span>
+            </label>
+            <select
+              className="w-full px-3 py-2 bg-input border border-border rounded-[0.625rem] text-card-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+              value={newTask.assigneeId}
+              onChange={(e) => setNewTask({ ...newTask, assigneeId: e.target.value })}
+              required
+            >
+              <option value="">Select a team member</option>
+              {acceptedMembers.map((member) => (
+                <option key={member.user.id} value={member.user.id}>
+                  {member.user.fullName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              variant="secondary"
+              onClick={() => setShowCreateTaskModal(false)}
+              disabled={creatingTask}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateTask}
+              disabled={!newTask.title.trim() || !newTask.assigneeId || creatingTask}
+            >
+              {creatingTask ? 'Creating...' : 'Create Task'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

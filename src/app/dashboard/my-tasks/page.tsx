@@ -333,6 +333,16 @@ export default function MyTasksPage() {
         isOpen={!!selectedTask}
         onClose={() => setSelectedTask(null)}
         currentUserId={currentUserId}
+        onStatusChange={(taskId, newStatus) => {
+          setTasks((prev) =>
+            prev.map((task) =>
+              task.id === taskId ? { ...task, status: newStatus as Task['status'] } : task
+            )
+          )
+          setSelectedTask((prev) =>
+            prev ? { ...prev, status: newStatus as Task['status'] } : null
+          )
+        }}
       />
     </div>
   )
