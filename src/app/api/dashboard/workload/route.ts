@@ -31,7 +31,6 @@ export interface TeamMemberWorkload {
     total: number;
     todo: number;
     inProgress: number;
-    inReview: number;
     done: number;
     overdue: number;
   };
@@ -97,9 +96,8 @@ export async function GET() {
 
             const taskCounts = {
               total: tasks.length,
-              todo: tasks.filter((t) => t.status === "todo").length,
+              todo: tasks.filter((t) => t.status === "to_do").length,
               inProgress: tasks.filter((t) => t.status === "in_progress").length,
-              inReview: tasks.filter((t) => t.status === "in_review").length,
               done: tasks.filter((t) => t.status === "done").length,
               overdue: tasks.filter(
                 (t) =>
@@ -137,7 +135,6 @@ export async function GET() {
           existing.tasks.total += member.tasks.total;
           existing.tasks.todo += member.tasks.todo;
           existing.tasks.inProgress += member.tasks.inProgress;
-          existing.tasks.inReview += member.tasks.inReview;
           existing.tasks.done += member.tasks.done;
           existing.tasks.overdue += member.tasks.overdue;
         } else {
