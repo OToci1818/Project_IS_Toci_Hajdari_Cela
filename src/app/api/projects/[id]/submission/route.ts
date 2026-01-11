@@ -4,6 +4,17 @@ import { prisma } from '@/lib/prisma'
 import { notificationService } from '@/services/NotificationService'
 import jwt from 'jsonwebtoken'
 
+// Helper to serialize BigInt in submission files
+function serializeSubmission(submission: { files: { sizeBytes: bigint }[] } & Record<string, unknown>) {
+  return {
+    ...submission,
+    files: submission.files.map(file => ({
+      ...file,
+      sizeBytes: file.sizeBytes.toString(),
+    })),
+  }
+}
+
 async function getCurrentUser() {
   const cookieStore = await cookies()
   const token = cookieStore.get('token')?.value
@@ -50,7 +61,9 @@ export async function GET(
       },
     })
 
-    return NextResponse.json({ submission })
+    return NextResponse.json({
+      submission: submission ? serializeSubmission(submission) : null
+    })
   } catch (error) {
     console.error('Get submission error:', error)
     return NextResponse.json(
@@ -125,7 +138,7 @@ export async function POST(
       },
     })
 
-    return NextResponse.json({ submission })
+    return NextResponse.json({ submission: serializeSubmission(submission) })
   } catch (error) {
     console.error('Create submission error:', error)
     return NextResponse.json(
@@ -201,6 +214,18 @@ export async function PATCH(
         },
       })
 
+      // Mark all project tasks as done when final submission is submitted
+      await prisma.task.updateMany({
+        where: {
+          projectId: id,
+          isDeleted: false,
+          status: { not: 'done' },
+        },
+        data: {
+          status: 'done',
+        },
+      })
+
       // Notify professor
       if (project.course?.professorId) {
         await notificationService.notifySubmissionReceived(
@@ -211,7 +236,7 @@ export async function PATCH(
         )
       }
 
-      return NextResponse.json({ submission })
+      return NextResponse.json({ submission: serializeSubmission(submission) })
     }
 
     if (action === 'approve' || action === 'request_revision') {
@@ -265,7 +290,7 @@ export async function PATCH(
         )
       }
 
-      return NextResponse.json({ submission })
+      return NextResponse.json({ submission: serializeSubmission(submission) })
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
