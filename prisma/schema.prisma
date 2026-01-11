@@ -306,16 +306,17 @@ model Notification {
 // ============================================
 
 model Course {
-  id          String   @id @default(uuid())
-  title       String
-  code        String   @unique
-  description String?
-  semester    String   // Fall, Spring, Summer
-  year        Int
-  professorId String   @map("professor_id")
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id              String   @id @default(uuid())
+  title           String
+  code            String   @unique
+  description     String?
+  semester        String   // Fall, Spring, Summer
+  year            Int
+  professorId     String   @map("professor_id")
+  isActive        Boolean  @default(true) @map("is_active")
+  projectsEnabled Boolean  @default(true) @map("projects_enabled")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   professor     User               @relation("CourseProfessor", fields: [professorId], references: [id])
   enrollments   CourseEnrollment[]

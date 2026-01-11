@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type') // 'enrolled', 'available', 'teaching'
+    const forProjects = searchParams.get('forProjects') === 'true'
 
     let courses
 
@@ -46,6 +47,11 @@ export async function GET(request: NextRequest) {
     } else {
       // Students see enrolled courses by default
       courses = await courseService.getEnrolledCourses(user.id)
+    }
+
+    // Filter to only courses with projects enabled (for project creation dropdown)
+    if (forProjects && courses) {
+      courses = courses.filter((course: { projectsEnabled?: boolean }) => course.projectsEnabled !== false)
     }
 
     return NextResponse.json({ courses })

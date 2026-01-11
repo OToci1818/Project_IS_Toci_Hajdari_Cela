@@ -97,7 +97,7 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { title, code, description, semester, year, isActive } = body
+    const { title, code, description, semester, year, isActive, projectsEnabled } = body
 
     // Check for duplicate code if code is being changed
     if (code && code.toUpperCase() !== course.code) {
@@ -119,6 +119,7 @@ export async function PATCH(
       semester,
       year: year ? parseInt(year, 10) : undefined,
       isActive,
+      projectsEnabled,
     })
 
     return NextResponse.json({ course: updatedCourse })

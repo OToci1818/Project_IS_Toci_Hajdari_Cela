@@ -74,8 +74,8 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     fetchProjects()
-    // Fetch courses for the dropdown
-    fetch('/api/courses')
+    // Fetch courses for the dropdown (only courses with projects enabled)
+    fetch('/api/courses?forProjects=true')
       .then((res) => res.json())
       .then((data) => setCourses(data.courses || []))
       .catch(console.error)

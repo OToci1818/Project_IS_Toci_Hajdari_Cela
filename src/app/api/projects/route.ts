@@ -65,6 +65,21 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check if course has projects enabled
+    if (courseId) {
+      const course = await prisma.course.findUnique({
+        where: { id: courseId },
+        select: { projectsEnabled: true },
+      });
+
+      if (course && !course.projectsEnabled) {
+        return NextResponse.json(
+          { error: "Projects are disabled for this course" },
+          { status: 403 }
+        );
+      }
+    }
+
     const project = await projectService.createProject({
       title,
       description,

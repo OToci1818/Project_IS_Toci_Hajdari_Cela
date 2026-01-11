@@ -22,6 +22,10 @@ export interface ProjectMemberDetails {
     id: string
     fullName: string
   }
+  project?: {
+    id: string
+    title: string
+  }
   taskStats: {
     assigned: number
     completed: number
@@ -518,6 +522,12 @@ class TeamService {
         ? {
             id: invite.invitedBy.id,
             fullName: invite.invitedBy.fullName,
+          }
+        : undefined,
+      project: invite.project
+        ? {
+            id: invite.project.id,
+            title: invite.project.title,
           }
         : undefined,
       taskStats: { assigned: 0, completed: 0 },

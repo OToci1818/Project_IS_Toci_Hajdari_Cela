@@ -16,6 +16,7 @@ export interface UpdateCourseInput {
   semester?: string
   year?: number
   isActive?: boolean
+  projectsEnabled?: boolean
 }
 
 export interface CourseWithDetails {
@@ -27,6 +28,7 @@ export interface CourseWithDetails {
   year: number
   professorId: string
   isActive: boolean
+  projectsEnabled: boolean
   createdAt: Date
   updatedAt: Date
   professor: {

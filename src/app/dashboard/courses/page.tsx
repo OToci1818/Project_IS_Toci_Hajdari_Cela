@@ -12,6 +12,7 @@ interface Course {
   semester: string
   year: number
   isActive: boolean
+  projectsEnabled: boolean
   professor: {
     id: string
     fullName: string
@@ -45,6 +46,7 @@ export default function CoursesPage() {
   })
   const [creating, setCreating] = useState(false)
   const [enrolling, setEnrolling] = useState<string | null>(null)
+  const [togglingProjects, setTogglingProjects] = useState<string | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -143,6 +145,36 @@ export default function CoursesPage() {
     }
   }
 
+  const handleToggleProjects = async (e: React.MouseEvent, courseId: string, currentState: boolean) => {
+    e.preventDefault() // Prevent navigation
+    e.stopPropagation()
+    setTogglingProjects(courseId)
+
+    try {
+      const response = await fetch(`/api/courses/${courseId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectsEnabled: !currentState }),
+      })
+
+      if (response.ok) {
+        setCourses((prev) =>
+          prev.map((c) =>
+            c.id === courseId ? { ...c, projectsEnabled: !currentState } : c
+          )
+        )
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to update course')
+      }
+    } catch (error) {
+      console.error('Failed to toggle projects:', error)
+      alert('Failed to update course')
+    } finally {
+      setTogglingProjects(null)
+    }
+  }
+
   const isProfessor = user?.role === 'professor'
 
   if (loading) {
@@ -221,15 +253,27 @@ export default function CoursesPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {courses.map((course) => (
+          {courses.map((course) => {
+            const isDisabledForStudent = !isProfessor && !course.projectsEnabled
+
+            return (
             <Link key={course.id} href={`/dashboard/courses/${course.id}`}>
-              <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
+              <Card className={`h-full transition-colors cursor-pointer ${
+                isDisabledForStudent
+                  ? 'opacity-60 border-muted'
+                  : 'hover:border-primary/50'
+              }`}>
                 <div className="flex flex-col h-full">
                   <div className="flex items-start justify-between mb-3">
                     <Badge variant="info">{course.code}</Badge>
-                    <Badge variant={course.isActive ? 'success' : 'warning'}>
-                      {course.isActive ? 'Active' : 'Inactive'}
-                    </Badge>
+                    <div className="flex gap-2">
+                      {isDisabledForStudent && (
+                        <Badge variant="warning">Projects Disabled</Badge>
+                      )}
+                      <Badge variant={course.isActive ? 'success' : 'warning'}>
+                        {course.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </div>
                   </div>
                   <h3 className="text-lg font-semibold text-card-foreground mb-2">
                     {course.title}
@@ -288,11 +332,41 @@ export default function CoursesPage() {
                         {course._count.projects} projects
                       </span>
                     </div>
+                    {isProfessor && (
+                      <div className="flex items-center justify-between pt-3 mt-3 border-t border-border">
+                        <span className="text-sm">Student Projects</span>
+                        <button
+                          onClick={(e) => handleToggleProjects(e, course.id, course.projectsEnabled)}
+                          disabled={togglingProjects === course.id}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                            course.projectsEnabled ? 'bg-primary' : 'bg-muted'
+                          } ${togglingProjects === course.id ? 'opacity-50' : ''}`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              course.projectsEnabled ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    )}
+                    {isDisabledForStudent && (
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-500">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                          </svg>
+                          <span>Professor has disabled project creation</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </Card>
             </Link>
-          ))}
+            )
+          })}
         </div>
       )}
 
