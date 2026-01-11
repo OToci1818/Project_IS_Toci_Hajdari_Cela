@@ -43,6 +43,66 @@ async function seed() {
       });
       const existingProjectIds = existingProjects.map((p) => p.id);
 
+      // Delete announcements
+      await prisma.announcement.deleteMany({
+        where: {
+          course: {
+            professorId: { in: existingUserIds },
+          },
+        },
+      });
+
+      // Delete project reviews
+      await prisma.projectReview.deleteMany({
+        where: {
+          OR: [
+            { projectId: { in: existingProjectIds } },
+            { professorId: { in: existingUserIds } },
+          ],
+        },
+      });
+
+      // Delete final submission files
+      await prisma.finalSubmissionFile.deleteMany({
+        where: {
+          submission: {
+            projectId: { in: existingProjectIds },
+          },
+        },
+      });
+
+      // Delete final submissions
+      await prisma.finalSubmission.deleteMany({
+        where: {
+          projectId: { in: existingProjectIds },
+        },
+      });
+
+      // Delete project grades
+      await prisma.projectGrade.deleteMany({
+        where: {
+          OR: [
+            { projectId: { in: existingProjectIds } },
+            { professorId: { in: existingUserIds } },
+          ],
+        },
+      });
+
+      // Delete course enrollments
+      await prisma.courseEnrollment.deleteMany({
+        where: {
+          OR: [
+            { studentId: { in: existingUserIds } },
+            { course: { professorId: { in: existingUserIds } } },
+          ],
+        },
+      });
+
+      // Delete courses
+      await prisma.course.deleteMany({
+        where: { professorId: { in: existingUserIds } },
+      });
+
       // Delete notifications
       await prisma.notification.deleteMany({
         where: {
@@ -211,6 +271,79 @@ async function seed() {
     console.log("   - prof.ahmeti@fti.edu.al (Prof. Artan Ahmeti)\n");
 
     // ============================================
+    // CREATE COURSES
+    // ============================================
+    const cs401 = await prisma.course.create({
+      data: {
+        title: "Advanced Software Engineering",
+        code: "CS401",
+        description: "Advanced concepts in software engineering including architecture, testing, and DevOps.",
+        semester: "Spring",
+        year: 2026,
+        professorId: professor.id,
+        isActive: true,
+      },
+    });
+
+    const cs350 = await prisma.course.create({
+      data: {
+        title: "Web Development",
+        code: "CS350",
+        description: "Full-stack web development with modern frameworks and databases.",
+        semester: "Spring",
+        year: 2026,
+        professorId: professor.id,
+        isActive: true,
+      },
+    });
+
+    const cs480 = await prisma.course.create({
+      data: {
+        title: "Machine Learning",
+        code: "CS480",
+        description: "Introduction to machine learning algorithms and practical applications.",
+        semester: "Fall",
+        year: 2025,
+        professorId: professor.id,
+        isActive: true,
+      },
+    });
+
+    console.log("✅ Created 3 courses: CS401, CS350, CS480\n");
+
+    // ============================================
+    // CREATE COURSE ENROLLMENTS
+    // ============================================
+    // CS401 (E-Commerce) - All students except Fatjon
+    await prisma.courseEnrollment.createMany({
+      data: [
+        { courseId: cs401.id, studentId: ana.id },
+        { courseId: cs401.id, studentId: bledi.id },
+        { courseId: cs401.id, studentId: dea.id },
+        { courseId: cs401.id, studentId: erion.id },
+      ],
+    });
+
+    // CS350 (Student Portal) - Ana, Bledi, Fatjon
+    await prisma.courseEnrollment.createMany({
+      data: [
+        { courseId: cs350.id, studentId: ana.id },
+        { courseId: cs350.id, studentId: bledi.id },
+        { courseId: cs350.id, studentId: fatjon.id },
+      ],
+    });
+
+    // CS480 (ML Project) - Dea, Erion
+    await prisma.courseEnrollment.createMany({
+      data: [
+        { courseId: cs480.id, studentId: dea.id },
+        { courseId: cs480.id, studentId: erion.id },
+      ],
+    });
+
+    console.log("✅ Created course enrollments for all students\n");
+
+    // ============================================
     // CREATE PROJECTS
     // ============================================
 
@@ -221,6 +354,7 @@ async function seed() {
         description:
           "Build a full-stack e-commerce platform with product catalog, shopping cart, checkout process, and admin dashboard. Uses React frontend with Node.js backend and PostgreSQL database.",
         courseCode: "CS401",
+        courseId: cs401.id,
         projectType: "group",
         status: "active",
         teamLeaderId: erion.id,
@@ -273,6 +407,7 @@ async function seed() {
         description:
           "A web portal for students to view grades, manage course registrations, and communicate with professors. Features real-time notifications and calendar integration.",
         courseCode: "CS350",
+        courseId: cs350.id,
         projectType: "group",
         status: "active",
         teamLeaderId: ana.id,
@@ -317,6 +452,7 @@ async function seed() {
         description:
           "Develop a machine learning model for sentiment analysis on Albanian social media text. Includes data collection, preprocessing, model training, and API deployment.",
         courseCode: "CS480",
+        courseId: cs480.id,
         projectType: "group",
         status: "completed",
         teamLeaderId: dea.id,
@@ -542,6 +678,311 @@ async function seed() {
     console.log("   E-Commerce Platform: 2 done, 1 in progress, 2 to do");
     console.log("   Student Portal: 1 done, 1 in progress, 3 to do");
     console.log("   Machine Learning Model: 5 done (completed project)\n");
+
+    // ============================================
+    // CREATE PROJECT GRADES
+    // ============================================
+    await prisma.projectGrade.create({
+      data: {
+        projectId: mlProject.id,
+        professorId: professor.id,
+        gradeType: "numeric",
+        numericGrade: 92,
+        feedback: "Excellent work on the sentiment analysis model. The data preprocessing pipeline was particularly well-designed, and the API documentation was thorough. Minor improvements could be made in model interpretability.",
+      },
+    });
+
+    console.log("✅ Created grade for ML Project: 92/100\n");
+
+    // ============================================
+    // CREATE FINAL SUBMISSIONS
+    // ============================================
+    await prisma.finalSubmission.create({
+      data: {
+        projectId: mlProject.id,
+        description: "Final submission for Albanian Sentiment Analysis ML Model. Includes trained model, API documentation, and source code.",
+        status: "approved",
+        submittedAt: new Date("2025-12-18"),
+        submittedById: dea.id,
+        reviewedAt: new Date("2025-12-20"),
+        reviewedById: professor.id,
+        reviewComment: "Well-documented and professionally presented. The model shows good accuracy on the test set.",
+      },
+    });
+
+    console.log("✅ Created final submission for ML Project\n");
+
+    // ============================================
+    // CREATE ANNOUNCEMENTS
+    // ============================================
+    await prisma.announcement.createMany({
+      data: [
+        {
+          courseId: cs401.id,
+          professorId: professor.id,
+          title: "Project Deadline Reminder",
+          content: "Reminder: The E-Commerce Platform project is due on February 28th. Make sure all team members have committed their code and the final submission is ready.",
+          isPinned: true,
+        },
+        {
+          courseId: cs350.id,
+          professorId: professor.id,
+          title: "Office Hours Change",
+          content: "Office hours for this week will be moved from Wednesday 2-4pm to Thursday 3-5pm due to a faculty meeting.",
+          isPinned: false,
+        },
+        {
+          courseId: cs480.id,
+          professorId: professor.id,
+          title: "Grades Posted",
+          content: "Final grades for the Machine Learning project have been posted. Great work everyone! Feel free to schedule a meeting to discuss your feedback.",
+          isPinned: true,
+        },
+      ],
+    });
+
+    console.log("✅ Created 3 announcements\n");
+
+    // ============================================
+    // CREATE PROJECT REVIEWS
+    // ============================================
+    await prisma.projectReview.create({
+      data: {
+        projectId: mlProject.id,
+        professorId: professor.id,
+        content: "Overall, this project demonstrates a strong understanding of NLP concepts and practical ML implementation. The team showed excellent collaboration and met all milestones on time. Recommendations for future work: consider fine-tuning with more Albanian-specific data and implementing a simple web interface for demonstration.",
+      },
+    });
+
+    console.log("✅ Created project review for ML Project\n");
+
+    // ============================================
+    // CREATE NOTIFICATIONS
+    // ============================================
+
+    // Task completion notifications (for Ana - she'll see task completed by others)
+    await prisma.notification.createMany({
+      data: [
+        // Task completed notification - Bledi completed auth task, Ana gets notified
+        {
+          userId: ana.id,
+          type: "task_completed",
+          title: "Task Completed",
+          message: "Bledi Hoxha completed 'Implement user authentication' in E-Commerce Platform",
+          projectId: ecommerce.id,
+          actorId: bledi.id,
+          isRead: false,
+          metadata: { taskTitle: "Implement user authentication" },
+        },
+        // Task completed notification - Erion completed DB schema, Ana gets notified
+        {
+          userId: ana.id,
+          type: "task_completed",
+          title: "Task Completed",
+          message: "Erion Shehu completed 'Design database schema' in E-Commerce Platform",
+          projectId: ecommerce.id,
+          actorId: erion.id,
+          isRead: false,
+          metadata: { taskTitle: "Design database schema" },
+        },
+        // Task assigned notification for Ana
+        {
+          userId: ana.id,
+          type: "task_assigned",
+          title: "New Task Assigned",
+          message: "Erion Shehu assigned you 'Build product catalog UI' in E-Commerce Platform",
+          projectId: ecommerce.id,
+          actorId: erion.id,
+          isRead: false,
+          metadata: { taskTitle: "Build product catalog UI" },
+        },
+        // Announcement notification for Ana (CS401)
+        {
+          userId: ana.id,
+          type: "announcement_posted",
+          title: "New Announcement",
+          message: "Prof. Artan Ahmeti posted 'Project Deadline Reminder' in CS401",
+          actorId: professor.id,
+          isRead: false,
+          metadata: { courseCode: "CS401", announcementTitle: "Project Deadline Reminder" },
+        },
+        // Announcement notification for Ana (CS350)
+        {
+          userId: ana.id,
+          type: "announcement_posted",
+          title: "New Announcement",
+          message: "Prof. Artan Ahmeti posted 'Office Hours Change' in CS350",
+          actorId: professor.id,
+          isRead: false,
+          metadata: { courseCode: "CS350", announcementTitle: "Office Hours Change" },
+        },
+      ],
+    });
+
+    // Notifications for Erion (team leader of E-Commerce)
+    await prisma.notification.createMany({
+      data: [
+        // Task completed by Bledi
+        {
+          userId: erion.id,
+          type: "task_completed",
+          title: "Task Completed",
+          message: "Bledi Hoxha completed 'Implement user authentication' in E-Commerce Platform",
+          projectId: ecommerce.id,
+          actorId: bledi.id,
+          isRead: false,
+          metadata: { taskTitle: "Implement user authentication" },
+        },
+        // Project status changed notification (ML project completed)
+        {
+          userId: erion.id,
+          type: "project_status_changed",
+          title: "Project Status Changed",
+          message: "Dea Krasniqi changed 'Machine Learning Model' status to completed",
+          projectId: mlProject.id,
+          actorId: dea.id,
+          isRead: false,
+          metadata: { newStatus: "completed" },
+        },
+        // Announcement for CS401
+        {
+          userId: erion.id,
+          type: "announcement_posted",
+          title: "New Announcement",
+          message: "Prof. Artan Ahmeti posted 'Project Deadline Reminder' in CS401",
+          actorId: professor.id,
+          isRead: false,
+          metadata: { courseCode: "CS401", announcementTitle: "Project Deadline Reminder" },
+        },
+      ],
+    });
+
+    // Notifications for Professor
+    await prisma.notification.createMany({
+      data: [
+        // Project created notification
+        {
+          userId: professor.id,
+          type: "project_created",
+          title: "New Project Created",
+          message: "Erion Shehu created 'E-Commerce Platform' in CS401",
+          projectId: ecommerce.id,
+          actorId: erion.id,
+          isRead: false,
+          metadata: { courseCode: "CS401" },
+        },
+        // Another project created
+        {
+          userId: professor.id,
+          type: "project_created",
+          title: "New Project Created",
+          message: "Ana Marku created 'Student Portal' in CS350",
+          projectId: portal.id,
+          actorId: ana.id,
+          isRead: false,
+          metadata: { courseCode: "CS350" },
+        },
+        // Project ready for submission
+        {
+          userId: professor.id,
+          type: "project_ready_for_submission",
+          title: "Project Ready for Review",
+          message: "'Machine Learning Model' is 100% complete and ready for final submission",
+          projectId: mlProject.id,
+          actorId: dea.id,
+          isRead: true, // This one is read since project was graded
+          metadata: { projectTitle: "Machine Learning Model" },
+        },
+        // Project completed notification
+        {
+          userId: professor.id,
+          type: "project_completed",
+          title: "Project Completed",
+          message: "Dea Krasniqi marked 'Machine Learning Model' as completed",
+          projectId: mlProject.id,
+          actorId: dea.id,
+          isRead: true,
+          metadata: {},
+        },
+      ],
+    });
+
+    // Notifications for Dea (team leader of ML project)
+    await prisma.notification.createMany({
+      data: [
+        // Task completed by Erion in ML project
+        {
+          userId: dea.id,
+          type: "task_completed",
+          title: "Task Completed",
+          message: "Erion Shehu completed 'Train ML model' in Machine Learning Model",
+          projectId: mlProject.id,
+          actorId: erion.id,
+          isRead: true,
+          metadata: { taskTitle: "Train ML model" },
+        },
+        // Project graded notification
+        {
+          userId: dea.id,
+          type: "project_graded",
+          title: "Project Graded",
+          message: "Prof. Artan Ahmeti graded 'Machine Learning Model': 92/100",
+          projectId: mlProject.id,
+          actorId: professor.id,
+          isRead: false,
+          metadata: { grade: 92, feedback: "Excellent work!" },
+        },
+        // Announcement for CS480
+        {
+          userId: dea.id,
+          type: "announcement_posted",
+          title: "New Announcement",
+          message: "Prof. Artan Ahmeti posted 'Grades Posted' in CS480",
+          actorId: professor.id,
+          isRead: false,
+          metadata: { courseCode: "CS480", announcementTitle: "Grades Posted" },
+        },
+      ],
+    });
+
+    // Notifications for Bledi
+    await prisma.notification.createMany({
+      data: [
+        // Task assigned
+        {
+          userId: bledi.id,
+          type: "task_assigned",
+          title: "New Task Assigned",
+          message: "Erion Shehu assigned you 'Payment integration' in E-Commerce Platform",
+          projectId: ecommerce.id,
+          actorId: erion.id,
+          isRead: false,
+          metadata: { taskTitle: "Payment integration" },
+        },
+        // Task due approaching
+        {
+          userId: bledi.id,
+          type: "task_due_approaching",
+          title: "Task Due Soon",
+          message: "'Create grades display component' is due in 3 days",
+          projectId: portal.id,
+          isRead: false,
+          metadata: { taskTitle: "Create grades display component", daysUntilDue: 3 },
+        },
+        // Announcement for CS350
+        {
+          userId: bledi.id,
+          type: "announcement_posted",
+          title: "New Announcement",
+          message: "Prof. Artan Ahmeti posted 'Office Hours Change' in CS350",
+          actorId: professor.id,
+          isRead: false,
+          metadata: { courseCode: "CS350", announcementTitle: "Office Hours Change" },
+        },
+      ],
+    });
+
+    console.log("✅ Created notifications for all users\n");
 
     // ============================================
     // SUMMARY
