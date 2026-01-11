@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { useInvites } from '@/contexts/InviteContext'
+import { useNotifications } from '@/contexts/NotificationContext'
 import NotificationBell from './NotificationBell'
 import SearchBar from './SearchBar'
 
@@ -12,6 +13,7 @@ interface NavItem {
   href: string
   icon: React.ReactNode
   hasBadge?: boolean
+  badgeType?: 'invite' | 'notification'
 }
 
 // Student/Team Leader navigation items
@@ -70,6 +72,7 @@ const studentNavItems: NavItem[] = [
       </svg>
     ),
     hasBadge: true,
+    badgeType: 'invite',
   },
   {
     name: 'Team',
@@ -107,6 +110,8 @@ const studentNavItems: NavItem[] = [
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
       </svg>
     ),
+    hasBadge: true,
+    badgeType: 'notification',
   },
   {
     name: 'Settings',
@@ -166,6 +171,8 @@ const professorNavItems: NavItem[] = [
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
       </svg>
     ),
+    hasBadge: true,
+    badgeType: 'notification',
   },
   {
     name: 'Settings',
@@ -190,6 +197,7 @@ export default function Sidebar() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const { inviteCount, setInviteCount } = useInvites()
+  const { unreadCount: notificationCount } = useNotifications()
 
   useEffect(() => {
     const fetchData = async () => {
@@ -268,7 +276,9 @@ export default function Sidebar() {
               {navItems.map((item) => {
                 const isActive = pathname === item.href ||
                   (item.href.includes('?') && pathname === item.href.split('?')[0])
-                const showBadge = item.hasBadge && inviteCount > 0
+                // Determine badge count based on badge type
+                const badgeCount = item.badgeType === 'notification' ? notificationCount : inviteCount
+                const showBadge = item.hasBadge && badgeCount > 0
                 return (
                   <li key={item.name}>
                     <Link
@@ -288,7 +298,7 @@ export default function Sidebar() {
                           px-2 py-0.5 text-xs font-semibold rounded-full
                           ${isActive ? 'bg-primary-foreground text-primary' : 'bg-primary text-primary-foreground'}
                         `}>
-                          {inviteCount}
+                          {badgeCount}
                         </span>
                       )}
                     </Link>
