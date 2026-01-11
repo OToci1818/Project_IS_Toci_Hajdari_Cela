@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { authService, commentService } from "@/services";
+import { authService, commentService, taskService } from "@/services";
 import jwt from "jsonwebtoken";
 
 async function getCurrentUser() {
@@ -62,6 +62,22 @@ export async function POST(
       return NextResponse.json(
         { error: "Content is required" },
         { status: 400 }
+      );
+    }
+
+    // Verify user is the task assignee - only assignee can comment on their task
+    const task = await taskService.getTaskById(taskId);
+    if (!task) {
+      return NextResponse.json(
+        { error: "Task not found" },
+        { status: 404 }
+      );
+    }
+
+    if (task.assigneeId !== user.id) {
+      return NextResponse.json(
+        { error: "Only the task assignee can add comments" },
+        { status: 403 }
       );
     }
 
