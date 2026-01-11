@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Card, Badge, Button, Tabs, FileList, Modal, Input } from '@/components'
+import { Card, Badge, Button, Tabs, FileList, Modal, Input, SubmissionTab } from '@/components'
 
 interface Member {
   id: string
@@ -69,12 +69,55 @@ interface FileItem {
   }
 }
 
-const tabs = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'tasks', label: 'Tasks' },
-  { id: 'members', label: 'Members' },
-  { id: 'files', label: 'Files' },
-]
+interface Grade {
+  id: string
+  gradeType: 'numeric' | 'letter'
+  numericGrade?: number
+  letterGrade?: string
+  feedback?: string
+  gradedAt: string
+  professor: {
+    id: string
+    fullName: string
+    email: string
+  }
+}
+
+interface SubmissionFile {
+  id: string
+  filename: string
+  filepath: string
+  sizeBytes: string
+  formattedSize: string
+  mimeType: string | null
+  createdAt: string
+  uploader: {
+    id: string
+    fullName: string
+    email: string
+  }
+}
+
+interface Submission {
+  id: string
+  projectId: string
+  status: 'draft' | 'submitted' | 'approved' | 'needs_revision'
+  description?: string
+  submittedAt?: string
+  reviewedAt?: string
+  reviewComment?: string
+  submittedBy?: {
+    id: string
+    fullName: string
+    email: string
+  }
+  reviewedBy?: {
+    id: string
+    fullName: string
+    email: string
+  }
+  files: SubmissionFile[]
+}
 
 export default function ProjectDetailPage() {
   const params = useParams()
@@ -84,6 +127,9 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
   const [files, setFiles] = useState<FileItem[]>([])
+  const [grade, setGrade] = useState<Grade | null>(null)
+  const [submission, setSubmission] = useState<Submission | null>(null)
+  const [submissionFiles, setSubmissionFiles] = useState<SubmissionFile[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
   const [currentUserId, setCurrentUserId] = useState('')
@@ -103,11 +149,14 @@ export default function ProjectDetailPage() {
   const fetchProject = useCallback(async () => {
     try {
       setLoading(true)
-      const [projectRes, tasksRes, filesRes, userRes] = await Promise.all([
+      const [projectRes, tasksRes, filesRes, userRes, gradeRes, submissionRes, submissionFilesRes] = await Promise.all([
         fetch(`/api/projects/${projectId}`),
         fetch(`/api/tasks?projectId=${projectId}`),
         fetch(`/api/projects/${projectId}/files`),
         fetch('/api/auth/me'),
+        fetch(`/api/projects/${projectId}/grade`),
+        fetch(`/api/projects/${projectId}/submission`),
+        fetch(`/api/projects/${projectId}/submission/files`),
       ])
 
       if (projectRes.ok) {
@@ -132,6 +181,21 @@ export default function ProjectDetailPage() {
         const data = await userRes.json()
         setCurrentUserId(data.user.id)
         setCurrentUserRole(data.user.role)
+      }
+
+      if (gradeRes.ok) {
+        const data = await gradeRes.json()
+        setGrade(data.grade)
+      }
+
+      if (submissionRes.ok) {
+        const data = await submissionRes.json()
+        setSubmission(data.submission)
+      }
+
+      if (submissionFilesRes.ok) {
+        const data = await submissionFilesRes.json()
+        setSubmissionFiles(data.files)
       }
     } catch (error) {
       console.error('Failed to fetch project:', error)
@@ -297,6 +361,23 @@ export default function ProjectDetailPage() {
   // Professors can only view - they cannot create tasks even if they were somehow the team leader
   const isTeamLeader = currentUserId === project.teamLeaderId && !isProfessor
 
+  // Dynamic tabs based on user role
+  const availableTabs = isProfessor
+    ? [
+        { id: 'overview', label: 'Overview' },
+        { id: 'members', label: 'Members' },
+        { id: 'submission', label: 'Submission' },
+        { id: 'grade', label: 'Grade' },
+      ]
+    : [
+        { id: 'overview', label: 'Overview' },
+        { id: 'tasks', label: 'Tasks' },
+        { id: 'members', label: 'Members' },
+        { id: 'submission', label: 'Submission' },
+        { id: 'files', label: 'Files' },
+        { id: 'grade', label: 'Grade' },
+      ]
+
   return (
     <div>
       {/* Back Link */}
@@ -343,25 +424,36 @@ export default function ProjectDetailPage() {
           </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-muted-foreground">Progress</span>
-            <span className="font-medium text-card-foreground">{project.progress}%</span>
+        {/* Progress Bar - Hidden for professors */}
+        {currentUserRole !== 'professor' && (
+          <div className="mb-4">
+            {(() => {
+              // Show 100% if submission is submitted or approved
+              const isSubmitted = submission?.status === 'submitted' || submission?.status === 'approved'
+              const displayProgress = isSubmitted ? 100 : project.progress
+              return (
+                <>
+                  <div className="flex items-center justify-between text-sm mb-2">
+                    <span className="text-muted-foreground">Progress</span>
+                    <span className="font-medium text-card-foreground">{displayProgress}%</span>
+                  </div>
+                  <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        displayProgress === 100 ? 'bg-success' : 'bg-primary'
+                      }`}
+                      style={{ width: `${displayProgress}%` }}
+                    />
+                  </div>
+                </>
+              )
+            })()}
           </div>
-          <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all ${
-                project.progress === 100 ? 'bg-success' : 'bg-primary'
-              }`}
-              style={{ width: `${project.progress}%` }}
-            />
-          </div>
-        </div>
+        )}
       </Card>
 
       {/* Tabs */}
-      <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} className="mb-6" />
+      <Tabs tabs={availableTabs} activeTab={activeTab} onChange={setActiveTab} className="mb-6" />
 
       {/* Tab Content */}
       {activeTab === 'overview' && (
@@ -516,6 +608,62 @@ export default function ProjectDetailPage() {
             currentUserId={currentUserId}
             onDelete={handleDeleteFile}
           />
+        </Card>
+      )}
+
+      {activeTab === 'submission' && (
+        <SubmissionTab
+          projectId={projectId}
+          submission={submission}
+          files={submissionFiles}
+          currentUserId={currentUserId}
+          isTeamLeader={isTeamLeader}
+          isProfessor={isProfessor}
+          onSubmissionUpdate={fetchProject}
+        />
+      )}
+
+      {activeTab === 'grade' && (
+        <Card>
+          <h2 className="text-lg font-semibold text-card-foreground mb-4">Project Grade</h2>
+          {grade ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="text-4xl font-bold text-success">
+                  {grade.gradeType === 'numeric'
+                    ? `${grade.numericGrade}/100`
+                    : grade.letterGrade}
+                </div>
+                <Badge variant="success">Graded</Badge>
+              </div>
+
+              {grade.feedback && (
+                <div>
+                  <h3 className="text-sm font-medium text-card-foreground mb-2">Feedback</h3>
+                  <p className="text-muted-foreground bg-muted/50 p-4 rounded-lg">
+                    {grade.feedback}
+                  </p>
+                </div>
+              )}
+
+              <div className="text-sm text-muted-foreground">
+                <p>Graded by: {grade.professor.fullName}</p>
+                <p>Graded on: {formatDate(grade.gradedAt)}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-card-foreground mb-2">Not Graded Yet</h3>
+              <p className="text-muted-foreground">
+                This project has not been graded by the professor yet.
+              </p>
+            </div>
+          )}
         </Card>
       )}
 
