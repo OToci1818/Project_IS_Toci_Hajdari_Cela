@@ -67,6 +67,11 @@ enum NotificationType {
   project_graded
   submission_status_changed
   review_posted
+  // New notification types
+  project_status_changed
+  project_created
+  project_ready_for_submission
+  deadline_missed
 }
 
 enum GradeType {
