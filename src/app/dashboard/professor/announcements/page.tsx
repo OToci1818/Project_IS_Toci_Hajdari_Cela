@@ -269,7 +269,7 @@ export default function ProfessorAnnouncementsPage() {
                         <path d="M5.273 4.5a1.25 1.25 0 00-1.205.918l-1.523 5.52c-.006.02-.01.041-.015.062H6a1 1 0 01.894.553l.448.894a1 1 0 00.894.553h3.528a1 1 0 00.894-.553l.448-.894A1 1 0 0114 10.5h3.47a1.318 1.318 0 00-.015-.062l-1.523-5.52a1.25 1.25 0 00-1.205-.918h-.977a.75.75 0 010-1.5h.977a2.75 2.75 0 012.651 2.019l1.523 5.52c.066.239.099.485.099.732V15a2 2 0 01-2 2H3a2 2 0 01-2-2v-3.73c0-.246.033-.492.099-.73l1.523-5.521A2.75 2.75 0 015.273 3h.977a.75.75 0 010 1.5h-.977z" />
                       </svg>
                     )}
-                    <Badge variant="outline">{announcement.course.code}</Badge>
+                    <Badge variant="default">{announcement.course.code}</Badge>
                     <h3 className="text-lg font-semibold text-card-foreground">{announcement.title}</h3>
                   </div>
                   <p className="text-muted-foreground mb-3 whitespace-pre-wrap">{announcement.content}</p>
@@ -294,12 +294,12 @@ export default function ProfessorAnnouncementsPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                     </svg>
                   </button>
-                  <Button variant="outline" size="sm" onClick={() => openEditModal(announcement)}>
+                  <Button variant="secondary" size="sm" onClick={() => openEditModal(announcement)}>
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => setDeleteId(announcement.id)}>
+                  <Button variant="secondary" size="sm" onClick={() => setDeleteId(announcement.id)}>
                     <svg className="w-4 h-4 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
@@ -403,7 +403,7 @@ export default function ProfessorAnnouncementsPage() {
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" onClick={() => setShowModal(false)}>
+            <Button variant="secondary" onClick={() => setShowModal(false)}>
               Cancel
             </Button>
             <Button onClick={handleSubmit} loading={saving}>
@@ -424,7 +424,7 @@ export default function ProfessorAnnouncementsPage() {
             Are you sure you want to delete this announcement? This action cannot be undone.
           </p>
           <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" onClick={() => setDeleteId(null)}>
+            <Button variant="secondary" onClick={() => setDeleteId(null)}>
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDelete} loading={deleting}>
