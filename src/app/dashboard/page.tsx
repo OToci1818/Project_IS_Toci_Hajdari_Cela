@@ -25,6 +25,11 @@ interface RecentProject {
   status: string
   progress: number
   deadlineDate?: string
+  grade?: {
+    gradeType: 'numeric' | 'letter'
+    numericGrade?: number
+    letterGrade?: string
+  }
 }
 
 // Professor dashboard interfaces
@@ -59,6 +64,23 @@ interface RecentActivity {
   details?: string
 }
 
+interface Announcement {
+  id: string
+  title: string
+  content: string
+  isPinned: boolean
+  createdAt: string
+  course: {
+    id: string
+    title: string
+    code: string
+  }
+  professor: {
+    id: string
+    fullName: string
+  }
+}
+
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
   const [userRole, setUserRole] = useState<string>('')
@@ -67,6 +89,7 @@ export default function DashboardPage() {
   // Student data
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([])
+  const [announcements, setAnnouncements] = useState<Announcement[]>([])
 
   // Professor data
   const [professorStats, setProfessorStats] = useState<ProfessorDashboardStats | null>(null)
@@ -97,6 +120,13 @@ export default function DashboardPage() {
           } else {
             setStats(dashboardData.stats)
             setRecentProjects(dashboardData.recentProjects)
+
+            // Fetch announcements for students
+            const announcementsResponse = await fetch('/api/announcements')
+            if (announcementsResponse.ok) {
+              const announcementsData = await announcementsResponse.json()
+              setAnnouncements(announcementsData.announcements || [])
+            }
           }
         }
       } catch (error) {
@@ -496,6 +526,50 @@ export default function DashboardPage() {
         ))}
       </div>
 
+      {/* Announcements */}
+      {announcements.length > 0 && (
+        <Card className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+              </svg>
+              <h2 className="text-xl font-semibold text-card-foreground">Announcements</h2>
+            </div>
+          </div>
+          <div className="space-y-4">
+            {announcements.slice(0, 3).map((announcement) => (
+              <div
+                key={announcement.id}
+                className="p-4 rounded-[0.625rem] border border-border hover:border-primary/30 transition-all"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      {announcement.isPinned && (
+                        <svg className="w-4 h-4 text-warning" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M5 5a2 2 0 012-2h6a2 2 0 012 2v2a2 2 0 01-2 2H7a2 2 0 01-2-2V5zm2 10v-4h6v4a2 2 0 01-2 2H9a2 2 0 01-2-2z" />
+                        </svg>
+                      )}
+                      <h3 className="font-medium text-card-foreground">{announcement.title}</h3>
+                      <Badge variant="info">{announcement.course.code}</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                      {announcement.content}
+                    </p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{announcement.professor.fullName}</span>
+                      <span>-</span>
+                      <span>{formatTimestamp(announcement.createdAt)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* Recent Projects */}
       <Card>
         <div className="flex items-center justify-between mb-6">
@@ -534,13 +608,20 @@ export default function DashboardPage() {
                 className="flex items-center justify-between p-4 rounded-[0.625rem] border border-border hover:border-primary/30 hover:bg-muted/50 transition-all cursor-pointer group block"
               >
                 <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-1">
+                  <div className="flex items-center gap-3 mb-1 flex-wrap">
                     <h3 className="font-medium text-card-foreground group-hover:text-primary transition-colors">
                       {project.title}
                     </h3>
                     <Badge variant={project.status === 'completed' ? 'success' : 'info'}>
                       {project.status}
                     </Badge>
+                    {project.grade && (
+                      <Badge variant="success">
+                        {project.grade.gradeType === 'numeric'
+                          ? `${project.grade.numericGrade}/100`
+                          : project.grade.letterGrade}
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
