@@ -52,6 +52,7 @@ interface TaskDetailModalProps {
   isOpen: boolean
   onClose: () => void
   currentUserId: string
+  onStatusChange?: (taskId: string, newStatus: string) => void
 }
 
 export default function TaskDetailModal({
@@ -59,11 +60,14 @@ export default function TaskDetailModal({
   isOpen,
   onClose,
   currentUserId,
+  onStatusChange,
 }: TaskDetailModalProps) {
   const [comments, setComments] = useState<Comment[]>([])
   const [files, setFiles] = useState<FileItem[]>([])
   const [loadingComments, setLoadingComments] = useState(false)
   const [loadingFiles, setLoadingFiles] = useState(false)
+  const [updatingStatus, setUpdatingStatus] = useState(false)
+  const [currentStatus, setCurrentStatus] = useState<string>(task?.status || 'to_do')
 
   const fetchComments = useCallback(async () => {
     if (!task) return
@@ -103,11 +107,34 @@ export default function TaskDetailModal({
     if (isOpen && task) {
       fetchComments()
       fetchFiles()
+      setCurrentStatus(task.status)
     } else {
       setComments([])
       setFiles([])
     }
   }, [isOpen, task, fetchComments, fetchFiles])
+
+  const handleMarkAsDone = async () => {
+    if (!task) return
+    setUpdatingStatus(true)
+    try {
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'done' }),
+      })
+      if (response.ok) {
+        setCurrentStatus('done')
+        if (onStatusChange) {
+          onStatusChange(task.id, 'done')
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update task status:', error)
+    } finally {
+      setUpdatingStatus(false)
+    }
+  }
 
   const handleAddComment = async (content: string) => {
     if (!task) return
@@ -223,9 +250,27 @@ export default function TaskDetailModal({
       <div className="space-y-6">
         {/* Task Info */}
         <div>
-          <div className="flex items-center gap-2 mb-4 flex-wrap">
-            {getStatusBadge(task.status)}
-            {getPriorityBadge(task.priority)}
+          <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              {getStatusBadge(currentStatus)}
+              {getPriorityBadge(task.priority)}
+            </div>
+            {currentStatus !== 'done' && (
+              <button
+                onClick={handleMarkAsDone}
+                disabled={updatingStatus}
+                className="flex items-center gap-2 px-4 py-2 bg-success text-success-foreground rounded-[0.625rem] font-medium text-sm hover:bg-success/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {updatingStatus ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+                Mark as Done
+              </button>
+            )}
           </div>
 
           {task.description && (
