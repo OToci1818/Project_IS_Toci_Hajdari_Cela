@@ -115,18 +115,27 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Fetch on mount and trigger scheduled notification check
+  // Fetch on mount and trigger deadline check
   useEffect(() => {
     fetchNotifications()
 
-    // Trigger scheduled notification check (for due dates, overdue tasks, etc.)
-    // Fire and forget - don't await
-    fetch('/api/notifications/check-scheduled', { method: 'POST' }).catch(() => {})
+    // Trigger deadline notification check (for tasks due today/tomorrow)
+    fetch('/api/notifications/check-deadlines', { method: 'POST' }).catch(() => {})
   }, [fetchNotifications])
 
   // Poll for new notifications every 30 seconds
   useEffect(() => {
     const interval = setInterval(fetchNotifications, 30000)
+    return () => clearInterval(interval)
+  }, [fetchNotifications])
+
+  // Check deadlines every 5 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetch('/api/notifications/check-deadlines', { method: 'POST' })
+        .then(() => fetchNotifications())
+        .catch(() => {})
+    }, 5 * 60 * 1000) // 5 minutes
     return () => clearInterval(interval)
   }, [fetchNotifications])
 
