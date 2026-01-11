@@ -300,8 +300,8 @@ class ProjectService {
       changes: input,
     })
 
-    // Send notification if project is marked as completed
-    if (input.status === 'completed' && existingProject.status !== 'completed') {
+    // Send notification if project status changed
+    if (input.status && input.status !== existingProject.status) {
       const updater = await prisma.user.findUnique({
         where: { id: updatedById },
         select: { id: true, fullName: true },
@@ -309,10 +309,22 @@ class ProjectService {
 
       if (updater) {
         const memberIds = existingProject.members.map((m) => m.userId)
-        await notificationService.notifyProjectCompleted(
-          memberIds,
+
+        // Use specific notification for 'completed' status
+        if (input.status === 'completed') {
+          await notificationService.notifyProjectCompleted(
+            memberIds,
+            updater,
+            { id: projectId, title: existingProject.title }
+          )
+        }
+
+        // Also send general status change notification
+        await notificationService.notifyProjectStatusChanged(
+          memberIds.filter((id) => id !== updatedById),
           updater,
-          { id: projectId, title: existingProject.title }
+          { id: projectId, title: existingProject.title },
+          input.status
         )
       }
     }
@@ -347,7 +359,7 @@ class ProjectService {
   }
 
   /**
-   * Check if a user can access a project (is team leader or accepted member).
+   * Check if a user can access a project (is team leader, accepted member, or course professor).
    */
   async canUserAccessProject(projectId: string, userId: string): Promise<boolean> {
     const project = await prisma.project.findUnique({
@@ -356,12 +368,22 @@ class ProjectService {
         members: {
           where: { userId, inviteStatus: 'accepted' },
         },
+        course: {
+          select: { professorId: true },
+        },
       },
     })
 
     if (!project) return false
 
-    return project.teamLeaderId === userId || project.members.length > 0
+    // Team leader can access
+    if (project.teamLeaderId === userId) return true
+    // Accepted member can access
+    if (project.members.length > 0) return true
+    // Course professor can access
+    if (project.course?.professorId === userId) return true
+
+    return false
   }
 
   /**
