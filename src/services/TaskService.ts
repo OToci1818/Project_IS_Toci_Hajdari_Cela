@@ -182,7 +182,16 @@ class TaskService {
       where: { id: taskId, isDeleted: false },
       include: {
         project: {
-          select: { id: true, title: true, teamLeaderId: true },
+          select: {
+            id: true,
+            title: true,
+            teamLeaderId: true,
+            courseId: true,
+            members: {
+              where: { inviteStatus: 'accepted' },
+              select: { userId: true },
+            },
+          },
         },
       },
     })
@@ -231,12 +240,15 @@ class TaskService {
       const project = { id: existingTask.project.id, title: existingTask.project.title }
       const taskInfo = { id: task.id, title: task.title }
 
-      // Collect recipients: task creator and team leader
-      const recipientIds: string[] = []
-      if (existingTask.createdById) recipientIds.push(existingTask.createdById)
-      if (existingTask.project.teamLeaderId && !recipientIds.includes(existingTask.project.teamLeaderId)) {
-        recipientIds.push(existingTask.project.teamLeaderId)
-      }
+      // Collect ALL project members as recipients (team leader + accepted members)
+      const allMemberIds = [
+        existingTask.project.teamLeaderId,
+        ...existingTask.project.members.map((m) => m.userId),
+      ]
+      // Remove duplicates and exclude the person who made the change
+      const recipientIds = Array.from(new Set(allMemberIds)).filter(
+        (id) => id && id !== changedById
+      )
 
       if (newStatus === 'done') {
         // Task completed notification
@@ -246,6 +258,9 @@ class TaskService {
           taskInfo,
           project
         )
+
+        // Check if project is now 100% complete and notify team leader
+        await this.checkAndNotifyProjectComplete(existingTask.project.id, existingTask.project.teamLeaderId)
       } else {
         // General status change notification
         await notificationService.notifyTaskStatusChanged(
@@ -635,6 +650,44 @@ class TaskService {
       createdAt: task.createdAt,
       updatedAt: task.updatedAt,
       dueDate: task.dueDate ?? undefined,
+    }
+  }
+
+  /**
+   * Check if project is 100% complete and notify team leader
+   */
+  private async checkAndNotifyProjectComplete(
+    projectId: string,
+    teamLeaderId: string
+  ): Promise<void> {
+    try {
+      // Get all tasks for the project
+      const tasks = await prisma.task.findMany({
+        where: { projectId, isDeleted: false },
+        select: { status: true },
+      })
+
+      if (tasks.length === 0) return
+
+      const doneTasks = tasks.filter((t) => t.status === 'done').length
+      const progress = Math.round((doneTasks / tasks.length) * 100)
+
+      // If project is 100% complete, notify team leader
+      if (progress === 100) {
+        const project = await prisma.project.findUnique({
+          where: { id: projectId },
+          select: { id: true, title: true },
+        })
+
+        if (project) {
+          await notificationService.notifyProjectReadyForSubmission(
+            teamLeaderId,
+            project
+          )
+        }
+      }
+    } catch (error) {
+      console.error('Failed to check project completion:', error)
     }
   }
 }
