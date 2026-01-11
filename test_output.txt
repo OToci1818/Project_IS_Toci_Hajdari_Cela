@@ -1,0 +1,50 @@
+
+> project-toci-hajdari-cela@0.1.0 test
+> jest --coverage
+
+PASS src/__tests__/stringHelpers.test.ts
+  stringHelpers
+    capitalize
+      √ should capitalize the first letter of a word (5 ms)
+      √ should handle edge cases correctly (1 ms)
+
+PASS src/__tests__/AuthService.test.ts
+  AuthService
+    hashPassword
+      √ should create a hash in the correct format (salt:hash) (17 ms)
+      √ should produce different hashes for the same password (16 ms)
+    verifyPassword
+      √ should return true for correct password (16 ms)
+      √ should return false for incorrect password (15 ms)
+      √ should return false for invalid hash format (1 ms)
+
+-------------------------|---------|----------|---------|---------|-------------------
+File                     | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------------|---------|----------|---------|---------|-------------------
+All files                |    2.33 |     0.68 |    1.69 |     2.4 |                   
+ services                |    2.03 |     0.68 |    1.13 |    2.07 |                   
+  AuthService.ts         |   22.03 |    13.33 |      20 |   20.68 | 38-167,199-246    
+  CommentService.ts      |       0 |        0 |       0 |       0 | 1-214             
+  CourseService.ts       |       0 |        0 |       0 |       0 | 1-416             
+  DashboardService.ts    |       0 |        0 |       0 |       0 | 1-436             
+  FileService.ts         |       0 |        0 |       0 |       0 | 1-194             
+  FileStorageService.ts  |       0 |        0 |       0 |       0 | 1-122             
+  NotificationService.ts |       0 |        0 |       0 |       0 | 1-844             
+  ProjectService.ts      |       0 |        0 |       0 |       0 | 1-397             
+  TaskService.ts         |       0 |        0 |       0 |       0 | 1-646             
+  TeamService.ts         |       0 |        0 |       0 |       0 | 1-557             
+ utils                   |     100 |      100 |     100 |     100 |                   
+  stringHelpers.ts       |     100 |      100 |     100 |     100 |                   
+-------------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 2.33% ( 15/642 )
+Branches     : 0.68% ( 4/588 )
+Functions    : 1.69% ( 3/177 )
+Lines        : 2.4% ( 14/581 )
+================================================================================
+Test Suites: 2 passed, 2 total
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        4.774 s, estimated 10 s
+Ran all test suites.
