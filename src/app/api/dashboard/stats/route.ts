@@ -28,9 +28,14 @@ export async function GET() {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const data = await dashboardService.getDashboardData(user.id);
+    // Return different data based on user role
+    if (user.role === 'professor') {
+      const data = await dashboardService.getProfessorDashboardData(user.id);
+      return NextResponse.json({ ...data, userRole: 'professor' });
+    }
 
-    return NextResponse.json(data);
+    const data = await dashboardService.getDashboardData(user.id);
+    return NextResponse.json({ ...data, userRole: 'student' });
   } catch (error) {
     console.error("Get dashboard stats error:", error);
     return NextResponse.json(
